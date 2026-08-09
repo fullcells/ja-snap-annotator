@@ -1,5 +1,7 @@
 # Third-party notices
 
+These components retain their original licenses and are excluded from the project's CC BY-NC-SA 4.0 grant except to the extent that the respective third-party licenses permit redistribution.
+
 The customized files under `src/tokenization/my-kuroshiro/` are derived from [Kuroshiro](https://github.com/hexenq/kuroshiro), distributed under the MIT License:
 
 > Copyright (c) 2015-2021 Hexen Qi
