@@ -44,14 +44,12 @@ const recordKey = 'current';
 type StoredJapaneseSBWords = {
 	key: typeof recordKey;
 	snapshot: JapaneseSBWordsSnapshot;
-	etag?: string;
 	lastCheckedAt: number;
 };
 
 // Module memory is the fast path after the first annotation. The promise fields
 // also prevent simultaneous annotations from duplicating IndexedDB/network work.
 let activeSnapshot = bundledSnapshot;
-let activeEtag: string | undefined;
 let lastCheckedAt = 0;
 let lastFailedAt = 0;
 let persistentStateLoaded = false;
@@ -133,7 +131,6 @@ async function loadPersistentState(): Promise<void> {
 			const stored = await readStoredSnapshot();
 			if (stored && isJapaneseSBWordsSnapshot(stored.snapshot)) {
 				activeSnapshot = stored.snapshot;
-				activeEtag = stored.etag;
 				lastCheckedAt = stored.lastCheckedAt || 0;
 			}
 		} catch (error) {
@@ -178,15 +175,22 @@ export async function refreshJapaneseSBWordsSnapshot({
 
 	refreshPromise = (async () => {
 		try {
-			const headers: Record<string, string> = {};
-			// ETag makes the daily check cheap: unchanged server data returns 304
-			// with no 1.35 MB JSON response body.
-			if (activeEtag) headers['If-None-Match'] = activeEtag;
-			const response = await fetch(endpointUrl, { headers, cache: 'no-store' });
+			// Send the known content version as a query parameter rather than an
+			// ETag. Some hosting layers replace application-generated ETags, whereas
+			// this SHA-based version remains stable and still permits a bodyless 304.
+			const requestUrl = new URL(
+				endpointUrl,
+				typeof location !== 'undefined' ? location.href : undefined,
+			);
+			requestUrl.searchParams.set('version', activeSnapshot.version);
+			// A user-requested refresh also asks Lingoprocessor to revalidate its
+			// short-lived server cache. The endpoint coalesces/rate-limits reloads.
+			if (force) requestUrl.searchParams.set('refresh', '1');
+			const response = await fetch(requestUrl, { cache: 'no-store' });
 			if (response.status === 304) {
 				lastCheckedAt = Date.now();
 				if (supportsPersistentJapaneseSBWords()) {
-					await writeStoredSnapshot({ key: recordKey, snapshot: activeSnapshot, etag: activeEtag, lastCheckedAt });
+					await writeStoredSnapshot({ key: recordKey, snapshot: activeSnapshot, lastCheckedAt });
 				}
 				return { updated: false, version: activeSnapshot.version, count: activeSnapshot.rows.length };
 			}
@@ -196,10 +200,9 @@ export async function refreshJapaneseSBWordsSnapshot({
 
 			const changed = snapshot.version !== activeSnapshot.version;
 			activeSnapshot = snapshot;
-			activeEtag = response.headers.get('etag') ?? undefined;
 			lastCheckedAt = Date.now();
 			if (supportsPersistentJapaneseSBWords()) {
-				await writeStoredSnapshot({ key: recordKey, snapshot: activeSnapshot, etag: activeEtag, lastCheckedAt });
+				await writeStoredSnapshot({ key: recordKey, snapshot: activeSnapshot, lastCheckedAt });
 			}
 			return { updated: changed, version: activeSnapshot.version, count: activeSnapshot.rows.length };
 		} catch (error) {
