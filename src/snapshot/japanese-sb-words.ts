@@ -27,7 +27,7 @@ const bundledSnapshot = bundledSnapshotJson as JapaneseSBWordsSnapshot;
 
 // Extracted MyJa clients can use this public endpoint without importing any
 // lingoprocessor/Supabase code. A manual refresh may override endpointUrl.
-const defaultRefreshEndpoint = 'https://lingo-annotate.replit.app/api/japanese-sb-words';
+const defaultRefreshEndpoint = 'https://lingoprocessor.omnilingualaccess.com/api/japanese-sb-words';
 const refreshIntervalMs = 24 * 60 * 60 * 1000;
 // A temporarily offline client may retry sooner than one day, but repeated
 // annotations will not cause a tight loop of failed network requests.
