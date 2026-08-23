@@ -61,6 +61,13 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 		});
 	}
 
+	// Verb て-form + standalone み: 試しにする meaning, e.g. 言って + み.
+	tokens.forEach((token, index) => {
+		if (token.text === "み" && tokens[index - 1]?.text.endsWith("て")) {
+			token.gloss = "try";
+		}
+	});
+
 	// と + 言/…
 	if (tokens.some(token => token.text === "と")) {
 		tokens.forEach((token, index) => {

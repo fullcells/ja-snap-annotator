@@ -1,6 +1,7 @@
 // Japanese token boundaries that should be restored after Kuromoji tokenization.
 // Keys/values were historically kept in the general LANG_TOKEN_REGROUPS table.
 const japaneseTokenRegroups: string[] = [
+	"王都",
 	"とは", "います", "いません", "あります", "ありません", "ません", "したい", "して", "ではありません", "ございます", "間に", "欧州連合", "でしょう","でしょうか","何回","眠りに就きます",
 	"0羽","1羽","2羽","3羽","4羽","5羽","6羽","7羽","8羽","9羽","何羽", "一羽",
 	"次のうち","のうち", "調理師", "看護師", "指差し", "でした", "だった", "いた",

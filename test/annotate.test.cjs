@@ -1,6 +1,10 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { annotate, refreshJapaneseSBWordsSnapshot } = require('../dist');
+const {
+	annotate,
+	applyJapaneseGlossTreatments,
+	refreshJapaneseSBWordsSnapshot,
+} = require('../dist');
 
 test('annotates Japanese offline from the bundled snapshot', async () => {
 	const tokens = await annotate('猫のひげは高い。');
@@ -9,6 +13,26 @@ test('annotates Japanese offline from the bundled snapshot', async () => {
 	assert.equal(tokens.find(token => token.text === 'ひげ')?.gloss, 'whiskers');
 	assert.equal(tokens.find(token => token.text === '高い')?.gloss, 'high');
 	assert.equal(tokens.find(token => token.text === '。')?.gloss ?? null, null);
+});
+
+test('applies Japanese token grouping and contextual gloss treatments', async () => {
+	const capital = await annotate('王都', { latestSBWords: [] });
+	assert.deepEqual(capital.map(token => token.text), ['王都']);
+
+	const annotatedTry = await annotate('言ってみ', { latestSBWords: [] });
+	assert.equal(annotatedTry.find(token => token.text === 'み')?.gloss, 'try');
+
+	const teFormTry = applyJapaneseGlossTreatments([
+		{ text: 'て', isWord: 1, gloss: '-te' },
+		{ text: 'み', isWord: 1, gloss: 'see' },
+	]);
+	assert.equal(teFormTry[1].gloss, 'try');
+
+	const unrelatedMi = applyJapaneseGlossTreatments([
+		{ text: '鏡', isWord: 1, gloss: 'mirror' },
+		{ text: 'み', isWord: 1, gloss: 'see' },
+	]);
+	assert.equal(unrelatedMi[1].gloss, 'see');
 });
 
 test('forced refresh sends the local snapshot version and requests server revalidation', async () => {
