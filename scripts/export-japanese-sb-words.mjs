@@ -3,6 +3,19 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const projectDirectory = process.cwd();
+
+try {
+	const envFile = await readFile(resolve(projectDirectory, '.env'), 'utf8');
+	for (const line of envFile.split(/\r?\n/)) {
+		const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+		if (!match || process.env[match[1]] !== undefined) continue;
+		const quoted = match[2].match(/^(['"])(.*)\1$/);
+		process.env[match[1]] = quoted ? quoted[2] : match[2];
+	}
+} catch (error) {
+	if (error?.code !== 'ENOENT') throw error;
+}
+
 const allowMissingConfiguration = process.argv.includes('--if-configured');
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
