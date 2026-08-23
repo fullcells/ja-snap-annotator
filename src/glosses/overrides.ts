@@ -22,7 +22,6 @@ const japaneseGlossOverrides: Record<string, string> = {
 	"が":";",//"(SBJ)",
 	"通っ":"through",
 	"ではありません":"is not",
-	"か":"or",
 	"ない": "not",
 	"ご飯": "rice",
 	"ありません": "none",
