@@ -1,5 +1,6 @@
 // Japanese token boundaries that should be restored after Kuromoji tokenization.
 // Keys/values were historically kept in the general LANG_TOKEN_REGROUPS table.
+// aka BRUTE MERGE
 const japaneseTokenRegroups: string[] = [
 	"王都",
 	"とは", "います", "いません", "あります", "ありません", "ません", "したい", "して", "ではありません", "ございます", "間に", "欧州連合", "でしょう","でしょうか","何回","眠りに就きます",
@@ -19,7 +20,7 @@ const japaneseTokenRegroups: string[] = [
 	"きます", "きました", "きた", "きて", "きません", "ビデオゲーム",
 	"食料品", "一冊", "ドイツ語", "建設作業員",
 	// 202510:
-	"助けて", "わくわくしている",
+	"助けて", "気をつけて", "わくわくしている",
 	"お腹がすいている","お腹がすいた","お腹がすい",
 	"喉が渇いている","喉が渇いた","喉が渇い",
 	"静かな",
