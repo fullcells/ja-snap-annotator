@@ -15,6 +15,22 @@ test('annotates Japanese offline from the bundled snapshot', async () => {
 	assert.equal(tokens.find(token => token.text === '。')?.gloss ?? null, null);
 });
 
+test('prefers caller-supplied current words2 rows over the bundled snapshot', async () => {
+	const latestSBWords = [{
+		id: 1,
+		word_lang: 'ja',
+		word: '猫',
+		gloss: 'current cat gloss',
+		gloss_lang: 'en',
+		is_core: true,
+		created_at: '2026-09-22T00:00:00.000Z',
+		is_human_verified: true,
+	}];
+	const tokens = await annotate('猫', { latestSBWords });
+	assert.equal(tokens.length, 1);
+	assert.equal(tokens[0].gloss, 'current cat gloss');
+});
+
 test('applies Japanese token grouping and contextual gloss treatments', async () => {
 	const capital = await annotate('王都', { latestSBWords: [] });
 	assert.deepEqual(capital.map(token => token.text), ['王都']);
