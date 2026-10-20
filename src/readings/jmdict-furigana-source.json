@@ -1,0 +1,10 @@
+{
+  "tag": "2.3.1+2026-09-25",
+  "source": "https://github.com/Doublevil/JmdictFurigana/releases/download/2.3.1%2B2026-09-25/JmdictFurigana.json",
+  "sha256": "2a8e206f0b171fa5acdce89e5f5798621b227175e5bfa2db6bd92fef63dd962e",
+  "entries": 232108,
+  "license": "CC-BY-SA-4.0",
+  "attribution": "JMdict © EDRDG / Jim Breen; furigana alignment by Doublevil / JmdictFurigana.",
+  "documentation": "https://github.com/Doublevil/JmdictFurigana",
+  "licenseUrl": "https://www.edrdg.org/edrdg/licence.html"
+}

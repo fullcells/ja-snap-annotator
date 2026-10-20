@@ -1,6 +1,6 @@
 {
   "name": "ja-snap-annotator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Offline-first, snapshot-based Japanese annotation for TypeScript and JavaScript.",
   "license": "CC-BY-NC-SA-4.0",
@@ -17,7 +17,8 @@
     "dist",
     "README.md",
     "LICENSE.md",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "licenses"
   ],
   "scripts": {
     "snapshot:update": "node scripts/export-japanese-sb-words.mjs",
@@ -26,7 +27,9 @@
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
     "dev": "tsc -p tsconfig.json --watch",
-    "test": "npm run build && node --test test/*.test.cjs"
+    "test": "npm run build && node --test test/*.test.cjs",
+    "readings:update": "node scripts/import-jmdict-furigana.mjs",
+    "release:pack": "npm run build && node scripts/package-release.mjs"
   },
   "dependencies": {
     "kuroshiro-analyzer-kuromoji": "1.1.0"

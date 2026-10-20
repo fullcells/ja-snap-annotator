@@ -1,3 +1,5 @@
+import { spellingOverrides } from "../treatments/spelling-overrides";
+import { resolveJapaneseReadings } from '../readings/resolve-japanese-readings';
 import MyKuroshiro from "../tokenization/my-kuroshiro/core.js";
 import KuromojiAnalyzer from "kuroshiro-analyzer-kuromoji";
 import japaneseTokenRegroups from '../treatments/token-regroups';
@@ -49,9 +51,6 @@ async function ensureKuroshiroInitialized(): Promise<void> {
 	await kuroshiroInitPromise;
 }
 
-const spellingOverrides: Record<string, string> = {
-	'色': 'いろ',
-};
 const symbolSpellingOverrides: Record<string, string> = {
 	'+': 'たす',
 	'=': 'は',
@@ -236,6 +235,7 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = regroupAnnotatedTokens(tokens, japaneseTokenRegroups);
 	tokens = mergeJapaneseTeForms(tokens);
 	tokens = await resplitKnownTokens(tokens);
+	tokens = resolveJapaneseReadings(tokens);
 	// Glossify
 	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
@@ -303,7 +303,7 @@ function jaTokenToPhoneticToken(jaToken: any): PhoneticToken { // kuroshiroToken
 export async function spellTokens(tokens: AnnotatedToken[]): Promise<AnnotatedToken[]> { // Only used by JA-LLM-Glosser which is not currently in use - 20260609
 	await ensureKuroshiroInitialized();
 
-	return Promise.all(
+	const spelled = await Promise.all(
 		tokens.map(async (token) => {
 			// Keep non-word tokens as-is.
 			if (!token.isWord) return { ...token };
@@ -330,4 +330,5 @@ export async function spellTokens(tokens: AnnotatedToken[]): Promise<AnnotatedTo
 			return withPhoneticToken(token, phoneticToken.length > 0 ? phoneticToken : null);
 		})
 	);
+	return resolveJapaneseReadings(spelled);
 }

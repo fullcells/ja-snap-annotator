@@ -30,3 +30,15 @@ npm test
 ```
 
 `npm run snapshot:update` regenerates the bundled snapshot when the Supabase URL and anon/service key environment variables are present. Normal builds retain the checked-in snapshot when they are not configured.
+
+## Dictionary readings and alignment
+
+Japanese word readings use Kuromoji/Kuroshiro first, then exact complete-word matches from the bundled [JMdictFurigana](https://github.com/Doublevil/JmdictFurigana) resource. It supplies dictionary readings together with their character spans. The resolver preserves lexical token boundaries and glosses; it skips ambiguous alternatives unless the current reading matches one, and never splits indivisible multi-kanji readings. Existing color, symbol, counter and other handwritten treatments remain in place and authoritative.
+
+`resolveJapaneseReadings(tokens, protectedText?)` can also repair cached annotations without re-tokenizing them. Use `protectedText` for any caller-owned manually verified word or character readings. Built-in protected readings also apply to cached annotations and `spellTokens`. Isolated single characters are not overridden.
+
+The index is generated, not maintained as a word exception list. Run `npm run readings:update` monthly to import the latest published dictionary, then build, test and release. For a reproducible import: `node scripts/import-jmdict-furigana.mjs /path/to/JmdictFurigana.json <release-tag>`. Normal builds and annotations remain offline. Source release, SHA-256 and attribution are recorded in `src/readings/jmdict-furigana-source.json`.
+
+Reading data is derived from JMdict (© Jim Breen / EDRDG) and Doublevil's JMdictFurigana, under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); see `THIRD_PARTY_NOTICES.md` and `licenses/`. The generated data remains under that license, separately from this library's source license. Consumer apps should retain source acknowledgement in their documentation or Sources/About page.
+
+Create a prebuilt GitHub release asset with `npm run release:pack`; the archive in `releases/` includes compiled code, dictionary data and licenses, without install-time build scripts.

@@ -14,3 +14,13 @@ Runtime dependencies include:
 - `kuromoji` — Apache License 2.0, Copyright its respective contributors.
 
 Complete dependency license texts are included by npm in their respective installed packages.
+
+## Generated Japanese dictionary reading data
+
+`src/readings/jmdict-furigana.json` (and its compiled copy) is a compact transformation of [JMdictFurigana](https://github.com/Doublevil/JmdictFurigana), by Doublevil, derived from JMdict, copyright Jim Breen and the Electronic Dictionary Research and Development Group (EDRDG). This data is licensed under Creative Commons Attribution-ShareAlike 4.0, not this project's CC BY-NC-SA license. The transformation removes invalid rows and non-Han entries, stores compact tuples and preserves reading alternatives/alignment. Exact source version and hash appear in `jmdict-furigana-source.json`.
+
+Source: https://github.com/Doublevil/JmdictFurigana
+Dictionary: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
+License statement: https://www.edrdg.org/edrdg/licence.html
+License: https://creativecommons.org/licenses/by-sa/4.0/
+Copies of the upstream documentation and license are in `licenses/`.
