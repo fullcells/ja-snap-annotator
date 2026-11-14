@@ -1,0 +1,314 @@
+[
+  {
+    "character": "交",
+    "gloss": "mingle; exchange; intercourse",
+    "example": "乱交",
+    "reading": "らんこう"
+  },
+  {
+    "character": "仔",
+    "gloss": "young animal; child",
+    "example": "仔馬",
+    "reading": "こうま"
+  },
+  {
+    "character": "侵",
+    "gloss": "invade; encroach",
+    "example": "侵襲的",
+    "reading": "しんしゅうてき"
+  },
+  {
+    "character": "刎",
+    "gloss": "behead",
+    "example": "刎ねない",
+    "reading": "はねない"
+  },
+  {
+    "character": "召",
+    "gloss": "summon; call",
+    "example": "召命",
+    "reading": "しょうめい"
+  },
+  {
+    "character": "吐",
+    "gloss": "vomit; spit",
+    "example": "吐、吐き気",
+    "reading": "は、はきけ"
+  },
+  {
+    "character": "咥",
+    "gloss": "hold in the mouth",
+    "example": "咥えた",
+    "reading": "くわえた"
+  },
+  {
+    "character": "噓",
+    "gloss": "lie; falsehood",
+    "example": "噓",
+    "reading": "うそ"
+  },
+  {
+    "character": "嚙",
+    "gloss": "bite; chew",
+    "example": "嚙みちぎる",
+    "reading": "かみちぎる"
+  },
+  {
+    "character": "堕",
+    "gloss": "fall; descend; degrade",
+    "example": "堕とされる",
+    "reading": "おとされる"
+  },
+  {
+    "character": "娼",
+    "gloss": "prostitution; prostitute",
+    "example": "娼館",
+    "reading": "しょうかん"
+  },
+  {
+    "character": "就",
+    "gloss": "take up; assume a position",
+    "example": "受け就ぐ",
+    "reading": "うけつぐ"
+  },
+  {
+    "character": "巨",
+    "gloss": "huge; great",
+    "example": "巨石",
+    "reading": "きょせき"
+  },
+  {
+    "character": "引",
+    "gloss": "pull; draw; hand over",
+    "example": "引渡",
+    "reading": "ひきわたし"
+  },
+  {
+    "character": "応",
+    "gloss": "respond; assent",
+    "example": "否が応でも",
+    "reading": "いやがおうでも"
+  },
+  {
+    "character": "慄",
+    "gloss": "tremble; shudder",
+    "example": "恐れ慄いている",
+    "reading": "おそれおののいている"
+  },
+  {
+    "character": "憑",
+    "gloss": "possess; haunt",
+    "example": "憑りつかれた",
+    "reading": "とりつかれた"
+  },
+  {
+    "character": "憚",
+    "gloss": "hesitate; be reluctant",
+    "example": "憚られる",
+    "reading": "はばかられる"
+  },
+  {
+    "character": "挫",
+    "gloss": "crush; thwart; sprain",
+    "example": "挫かれた",
+    "reading": "くじかれた"
+  },
+  {
+    "character": "捉",
+    "gloss": "catch; capture",
+    "example": "捉われた",
+    "reading": "とらわれた"
+  },
+  {
+    "character": "授",
+    "gloss": "confer; bestow",
+    "example": "授任式",
+    "reading": "じゅにんしき"
+  },
+  {
+    "character": "撃",
+    "gloss": "strike; attack",
+    "example": "心撃",
+    "reading": "しんげき"
+  },
+  {
+    "character": "擲",
+    "gloss": "throw; hurl",
+    "example": "擲弾兵",
+    "reading": "てきだんへい"
+  },
+  {
+    "character": "會",
+    "gloss": "meeting; association (old form of 会)",
+    "example": "會",
+    "reading": "かい"
+  },
+  {
+    "character": "歓",
+    "gloss": "joy; welcome",
+    "example": "歓... 迎しよう",
+    "reading": "かん... げいしよう"
+  },
+  {
+    "character": "爵",
+    "gloss": "noble rank; peerage",
+    "example": "卿爵",
+    "reading": "きょうしゃく"
+  },
+  {
+    "character": "痘",
+    "gloss": "pox; smallpox",
+    "example": "痘卿",
+    "reading": "とうきょう"
+  },
+  {
+    "character": "癒",
+    "gloss": "heal; soothe",
+    "example": "癒やして",
+    "reading": "いやして"
+  },
+  {
+    "character": "確",
+    "gloss": "certain; confirm",
+    "example": "確めさせて",
+    "reading": "たしかめさせて"
+  },
+  {
+    "character": "耐",
+    "gloss": "endure; resist",
+    "example": "耐毒剤",
+    "reading": "たいどくざい"
+  },
+  {
+    "character": "肚",
+    "gloss": "belly; resolve",
+    "example": "肚",
+    "reading": "はら"
+  },
+  {
+    "character": "腔",
+    "gloss": "cavity",
+    "example": "排泄腔",
+    "reading": "はいせつこう"
+  },
+  {
+    "character": "苛",
+    "gloss": "irritation; torment",
+    "example": "苛ついて",
+    "reading": "いらついて"
+  },
+  {
+    "character": "虐",
+    "gloss": "cruelty; abuse",
+    "example": "加虐",
+    "reading": "かぎゃく"
+  },
+  {
+    "character": "試",
+    "gloss": "try; test",
+    "example": "試着",
+    "reading": "しちゃく"
+  },
+  {
+    "character": "誕",
+    "gloss": "birth",
+    "example": "再誕",
+    "reading": "さいたん"
+  },
+  {
+    "character": "読",
+    "gloss": "read",
+    "example": "読心",
+    "reading": "どくしん"
+  },
+  {
+    "character": "貌",
+    "gloss": "face; appearance",
+    "example": "無貌",
+    "reading": "むぼう"
+  },
+  {
+    "character": "賤",
+    "gloss": "lowly; base",
+    "example": "下賤",
+    "reading": "げせん"
+  },
+  {
+    "character": "逃",
+    "gloss": "escape; let escape",
+    "example": "逃が... した",
+    "reading": "にが... した"
+  },
+  {
+    "character": "逝",
+    "gloss": "pass away; die",
+    "example": "早逝",
+    "reading": "そうせい"
+  },
+  {
+    "character": "遙",
+    "gloss": "distant; far off",
+    "example": "遙か",
+    "reading": "はるか"
+  },
+  {
+    "character": "鉤",
+    "gloss": "hook",
+    "example": "鉤爪",
+    "reading": "かぎづめ"
+  },
+  {
+    "character": "銛",
+    "gloss": "harpoon",
+    "example": "銛",
+    "reading": "もり"
+  },
+  {
+    "character": "鋏",
+    "gloss": "scissors; tongs",
+    "example": "鉄鋏",
+    "reading": "かなばさみ"
+  },
+  {
+    "character": "鑿",
+    "gloss": "chisel",
+    "example": "鑿",
+    "reading": "のみ"
+  },
+  {
+    "character": "閾",
+    "gloss": "threshold",
+    "example": "閾値",
+    "reading": "いきち"
+  },
+  {
+    "character": "靄",
+    "gloss": "mist; haze",
+    "example": "靄",
+    "reading": "もや"
+  },
+  {
+    "character": "頌",
+    "gloss": "praise; eulogy",
+    "example": "頌歌",
+    "reading": "しょうか"
+  },
+  {
+    "character": "頑",
+    "gloss": "stubborn; obstinate",
+    "example": "頑なに",
+    "reading": "かたくなに"
+  },
+  {
+    "character": "頸",
+    "gloss": "neck",
+    "example": "頸動脈",
+    "reading": "けいどうみゃく"
+  },
+  {
+    "character": "鬱",
+    "gloss": "gloom; depression",
+    "example": "鬱",
+    "reading": "うつ"
+  }
+]

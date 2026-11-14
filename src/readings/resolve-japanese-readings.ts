@@ -1,6 +1,8 @@
 import { protectedJapaneseReadingText } from "../treatments/spelling-overrides";
 import type { AnnotatedToken, PhoneticToken } from '../types';
 import entries from './jmdict-furigana.json';
+import { reviewedJapaneseReadings } from './reviewed-readings';
+import { repairMissingJapaneseReadings } from './repair-missing-readings';
 export { default as japaneseReadingSource } from './jmdict-furigana-source.json';
 
 const hira = (s: string) => s.normalize('NFKC').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
@@ -13,6 +15,9 @@ function readings() {
       const reading = parts.map(p => hira(p[1] ?? p[0])).join('');
       if (!options.some(option => option.map(p => hira(p[1] ?? p[0])).join('') === reading)) options.push(parts);
       dictionary.set(text, options);
+    }
+    for (const [text, parts] of reviewedJapaneseReadings) {
+      if (text !== '吐' && text !== '歓' && text !== '閾値') dictionary.set(text, [parts]);
     }
   }
   return dictionary;
@@ -68,5 +73,5 @@ export function resolveJapaneseReadings(tokens: AnnotatedToken[], protectedText:
     });
     start = chosen.end;
   }
-  return output;
+  return repairMissingJapaneseReadings(output, isProtected);
 }
