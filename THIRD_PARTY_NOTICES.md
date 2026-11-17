@@ -24,3 +24,12 @@ Dictionary: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
 License statement: https://www.edrdg.org/edrdg/licence.html
 License: https://creativecommons.org/licenses/by-sa/4.0/
 Copies of the upstream documentation and license are in `licenses/`.
+
+## Generated Japanese dictionary gloss data
+
+The English glosses in `src/readings/jmdict-furigana.json` (the third element of an entry) and `src/glosses/jmdict-kana-glosses.json` (and their compiled copies) are a transformation of JMdict's English, copyright Jim Breen and the Electronic Dictionary Research and Development Group (EDRDG), taken from the JSON conversion by [jmdict-simplified](https://github.com/scriptin/jmdict-simplified) (scriptin). This data is licensed under Creative Commons Attribution-ShareAlike 4.0, not this project's CC BY-NC-SA license. The transformation keeps one gloss per word, rewritten in a short learner style (`scripts/jmdict-gloss-style.mjs`). Exact source release, dictionary date and hash appear in `src/glosses/jmdict-glosses-source.json`.
+
+Source: https://github.com/scriptin/jmdict-simplified
+Dictionary: https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project
+License statement: https://www.edrdg.org/edrdg/licence.html
+License: https://creativecommons.org/licenses/by-sa/4.0/

@@ -14,6 +14,7 @@ export {
 	type JapaneseSBWordsSnapshotRefreshResult,
 } from './snapshot/japanese-sb-words';
 export { applyJapaneseGlossTreatments } from './glosses/treatments';
+export { applyJapaneseJmdictGlosses, japaneseJmdictGloss, japaneseJmdictKanaGloss, japaneseGlossSource } from './glosses/jmdict';
 export type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from './types';
 
 export { resolveJapaneseReadings, japaneseReadingSource } from './readings/resolve-japanese-readings';

@@ -29,6 +29,7 @@
     "dev": "tsc -p tsconfig.json --watch",
     "test": "npm run build && node --test test/*.test.cjs",
     "readings:update": "node scripts/import-jmdict-furigana.mjs",
+    "glosses:update": "node --max-old-space-size=6144 scripts/import-jmdict-glosses.mjs",
     "release:pack": "npm run build && node scripts/package-release.mjs"
   },
   "dependencies": {

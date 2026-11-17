@@ -1,0 +1,15 @@
+{
+  "tag": "3.6.2+20260928191014",
+  "source": "https://github.com/scriptin/jmdict-simplified/releases/download/3.6.2%2B20260928191014/jmdict-eng-3.6.2+20260928191014.json.tgz",
+  "sha256": "5f54504a62a7f45741e1bf6fd28f6e1e5add6405f2829748cc004a802839a3aa",
+  "dictDate": "2026-09-28",
+  "jmdictVersion": "3.6.2",
+  "words": 218840,
+  "readingIndexGlosses": 221900,
+  "readingIndexEntries": 232108,
+  "kanaGlosses": 92590,
+  "license": "CC-BY-SA-4.0",
+  "attribution": "JMdict © EDRDG / Jim Breen; JSON conversion by jmdict-simplified (scriptin).",
+  "documentation": "https://github.com/scriptin/jmdict-simplified",
+  "licenseUrl": "https://www.edrdg.org/edrdg/licence.html"
+}

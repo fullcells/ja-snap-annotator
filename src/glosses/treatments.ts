@@ -1,8 +1,8 @@
 import japaneseGlossOverrides from './overrides';
 import type { AnnotatedToken } from '../types';
 
-// Apply all deterministic/offline Japanese gloss knowledge. Unknown glosses are
-// intentionally left as null so an online wrapper can fill them later. Calling
+// Apply all deterministic/offline Japanese gloss knowledge. Glosses neither words2
+// nor JMdict knows stay null, so an online wrapper can still fill them later. Calling
 // this again after online glossing is safe and also cleans generated glosses.
 export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]): AnnotatedToken[] {
 	const tokens = annotatedTokens.map(token => ({

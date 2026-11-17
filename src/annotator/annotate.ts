@@ -14,6 +14,7 @@ import {
 	japaneseSBWordsGlossLookup,
 } from '../snapshot/japanese-sb-words';
 import { applyJapaneseBaseFormGlosses, type JapaneseMorpheme } from '../glosses/base-form';
+import { applyJapaneseJmdictGlosses } from '../glosses/jmdict';
 // Deliberate groupings (fixed phrases): the base-form fallback never splits or re-glosses them.
 const groupedTokens: ReadonlySet<string> = new Set(japaneseTokenRegroups);
 import type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from '../types';
@@ -181,7 +182,7 @@ export type JapaneseAnnotateOptions = {
 
 // Complete offline-first Japanese annotation. The bundled JapaneseSBWords are
 // usable without a connection; browser clients refresh them locally in the
-// background. Truly unknown English glosses remain null for an outer wrapper.
+// background. Words words2 lacks fall back to JMdict's English; only words neither knows keep a null gloss.
 export async function annotate(text: string, options: JapaneseAnnotateOptions = {}): Promise<AnnotatedToken[]> {
 	// Tokenize And Spell
 	let tokens = await tokenizeAndSpellWithKuroshiro(text);
@@ -198,7 +199,11 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	// Fallback: an inflected word words2 has no row for takes its dictionary form's row (internal base form from
 	// Kuromoji), splitting off negative / desire endings so their meaning stays visible.
 	const morphemes: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(text);
-	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, japaneseSBWordsGlossLookup(japaneseSBWords), groupedTokens);
+	const words2Gloss = japaneseSBWordsGlossLookup(japaneseSBWords);
+	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, words2Gloss, groupedTokens);
+	// Fallback: a content word words2 still has no gloss for takes its JMdict gloss (offline, imported in house style),
+	// chosen by spelling and resolved reading; inflected words by their dictionary form.
+	tokens = applyJapaneseJmdictGlosses(tokens, text, morphemes, words2Gloss, groupedTokens);
 	// Apply deterministic/context-aware overrides last so they remain stronger
 	// than a generic JapaneseSBWords match.
 	tokens = applyJapaneseGlossTreatments(tokens);
