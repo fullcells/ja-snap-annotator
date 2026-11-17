@@ -255,6 +255,19 @@ export function japaneseSBWordsGlossLookup(rows: JapaneseSBWords): (word: string
 	return lookup;
 }
 
+const rowSets = new WeakMap<JapaneseSBWords, Set<string>>();
+/** Whether words2 has a JA→EN row for exactly this text. Merging trusts these rows as one-token units even with a particle
+ * at either end (とは, の上); EN→JA rows, read in reverse by the gloss lookup, hold translations rather than tokens. */
+export function japaneseSBWordsHasRow(rows: JapaneseSBWords): (word: string) => boolean {
+	let words = rowSets.get(rows);
+	if (!words) {
+		words = new Set(rows.filter(row => row.word_lang === 'ja' && row.gloss_lang === 'en').map(row => row.word.toLowerCase()));
+		rowSets.set(rows, words);
+	}
+	const known = words;
+	return word => known.has(word.toLowerCase());
+}
+
 export function applyJapaneseSBWordsGlosses(tokens: AnnotatedToken[], rows: JapaneseSBWords): AnnotatedToken[] {
 	const glossOf = japaneseSBWordsGlossLookup(rows);
 	return tokens.map(token => {

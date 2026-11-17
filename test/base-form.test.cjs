@@ -22,7 +22,7 @@ test('the base form stays internal: tokens keep only text, isWord, gloss and pho
 
 test('existing glosses and deliberate groupings are left alone', async () => {
 	assert.equal(await gloss('書いてください', '書いて'), 'write');         // words2 row for the surface form
-	assert.equal(await gloss('どうやって行きますか', 'どうやって'), 'how can'); // a token-regroups phrase
+	assert.equal(await gloss('どうやって行きますか', 'どうやって'), 'how can'); // a words2 phrase, one unit
 	assert.deepEqual((await annotate('行かない')).map(t => t.text), ['行か', 'ない']);
 });
 
@@ -32,27 +32,26 @@ const m = (surface_form, pos, basic_form, word_position) => ({surface_form, pos,
 test('a significant ending inside an unglossed token is split off and glossed', () => {
 	const tokens = [{text: '行かなかった', isWord: 1, phoneticToken: [['行', 'い'], ['か'], ['な'], ['か'], ['っ'], ['た']]}];
 	const morphemes = [m('行か', '動詞', '行く', 1), m('なかっ', '助動詞', 'ない', 3), m('た', '助動詞', 'た', 6)];
-	const out = applyJapaneseBaseFormGlosses(tokens, '行かなかった', morphemes, lookup({'行く': 'go', 'なかった': "wasn't"}), new Set());
+	const out = applyJapaneseBaseFormGlosses(tokens, '行かなかった', morphemes, lookup({'行く': 'go', 'なかった': "wasn't"}));
 	assert.deepEqual(out.map(t => [t.text, t.gloss]), [['行か', 'go'], ['なかった', "wasn't"]]);
 	assert.equal(out.flatMap(t => t.phoneticToken).map(p => p[1] ?? p[0]).join(''), 'いかなかった');
 	assert.equal(tokens[0].gloss, undefined); // input not mutated
 });
 
-test('other endings stay part of the word; a grouped or already glossed token is never split', () => {
+test('other endings stay part of the word; an already glossed token is never split', () => {
 	const morphemes = [m('食べ', '動詞', '食べる', 1), m('たい', '助動詞', 'たい', 3)];
 	const token = () => [{text: '食べたい', isWord: 1, phoneticToken: [['食', 'た'], ['べ'], ['た'], ['い']]}];
 	const rows = lookup({'食べる': 'eat', 'たい': 'want'});
-	assert.deepEqual(applyJapaneseBaseFormGlosses(token(), '食べたい', morphemes, rows, new Set(['食べたい'])), token());
 	const glossed = [{...token()[0], gloss: 'want to eat'}];
-	assert.deepEqual(applyJapaneseBaseFormGlosses(glossed, '食べたい', morphemes, rows, new Set()), glossed);
+	assert.deepEqual(applyJapaneseBaseFormGlosses(glossed, '食べたい', morphemes, rows), glossed);
 	const te = [{text: '答えて', isWord: 1, phoneticToken: [['答', 'こた'], ['え'], ['て']]}];
-	const out = applyJapaneseBaseFormGlosses(te, '答えて', [m('答え', '動詞', '答える', 1), m('て', '助詞', 'て', 3)], lookup({'答える': 'answer'}), new Set());
+	const out = applyJapaneseBaseFormGlosses(te, '答えて', [m('答え', '動詞', '答える', 1), m('て', '助詞', 'て', 3)], lookup({'答える': 'answer'}));
 	assert.deepEqual(out.map(t => [t.text, t.gloss]), [['答えて', 'answer']]);
 });
 
 test('no words2 row for the base form, or not a verb or adjective: no gloss is invented', () => {
 	const noun = [{text: '路面', isWord: 1}];
-	assert.deepEqual(applyJapaneseBaseFormGlosses(noun, '路面', [m('路面', '名詞', '路面', 1)], lookup({}), new Set()), noun);
+	assert.deepEqual(applyJapaneseBaseFormGlosses(noun, '路面', [m('路面', '名詞', '路面', 1)], lookup({})), noun);
 	const verb = [{text: '咥えて', isWord: 1}];
-	assert.deepEqual(applyJapaneseBaseFormGlosses(verb, '咥えて', [m('咥え', '動詞', '咥える', 1), m('て', '助詞', 'て', 3)], lookup({}), new Set()), verb);
+	assert.deepEqual(applyJapaneseBaseFormGlosses(verb, '咥えて', [m('咥え', '動詞', '咥える', 1), m('て', '助詞', 'て', 3)], lookup({})), verb);
 });

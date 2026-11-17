@@ -57,11 +57,11 @@ Reading data is derived from JMdict (© Jim Breen / EDRDG) and Doublevil's JMdic
 
 Kuromoji splits more finely than a learner reads (あり + ます, 路面 + 電車, のり + ば, 背 + が + 高い). After tokenization, adjacent tokens are joined into one when the joined text is a known unit (`src/treatments/dictionary-merges.ts`), longest match first, within limits read from Kuromoji's analysis:
 
-- **words2 rows** are the house lexicon of units: word forms (あります, ですか), compounds, phrases with a particle inside (背が高い, 歯を磨く), adverb phrases (どうやって) and names (ハリー・ポッター). A row with a particle at either end (私は, の上) is not trusted yet, because words2 still has such rows that are not units (TODO.md).
+- **words2 rows** are the house lexicon of units: word forms (あります, ですか), compounds, phrases (背が高い, 歯を磨く, とは, の上, には), adverb phrases (どうやって) and names (ハリー・ポッター). So a row is also a promise: words2 should only hold units the annotator may show as one token (not 私は or 前に). A row with a particle at either end joins only when Kuromoji also splits it on its own; では, でも, なるほど and もの are single words to Kuromoji, so a split で + は in text stays two tokens.
 - **JMdict** contributes nouns only: compounds and broken kana words (路面電車, のりば).
 - **Numbers** belong to the numbers treatment: kanji numerals are one number (十 + 一 → 十一), 何 + counter is one question word (何回, 何分), and other counters stay separate tokens with counting readings (3 + 羽, 一 + 冊 いっさつ).
 
-The hand-written regroup list (`src/treatments/token-regroups.ts`) is being retired: it keeps only the 35 entries that need a words2 change first (TODO.md, "Retire the regroup list").
+This replaced the hand-written regroup list ("BRUTE MERGE"). To make something one token, add a words2 row for it; to split something that Kuromoji joins, use `tokenSplits` in `src/annotator/annotate.ts`.
 
 ## English glosses from JMdict
 
@@ -70,7 +70,7 @@ A word the words2 snapshot has no row for (路面 road surface, 運賃 fare, 交
 - **Words with kanji** use a gloss column added to the reading index (`src/readings/jmdict-furigana.json`), picked by spelling *and* resolved reading (角 かど corner, 角 かく angle). Without a matching reading, a spelling's gloss is used only when all its readings agree, so a wrong reading gives a wrong gloss or none.
 - **Words in kana** use `src/glosses/jmdict-kana-glosses.json`, keyed as written. A kana form that may be several words gets all their glosses, joined by " / ", words usually written in kana first (かど, 過度 or 角: "excessive / corner"; あめ: "candy / rain").
 - **Inflected words** use their dictionary form's gloss with the base-form fallback's rules (kanji dictionary forms only).
-- **Content words only:** particles, auxiliaries, symbols, numbers, proper nouns and dependent nouns (こと, ため) are never glossed from JMdict, nor are fragments of a kana word Kuromoji has split (み + らい, うり + ば). Names Kuromoji takes for common nouns (大橋 large bridge) get literal glosses.
+- **Content words only:** particles, auxiliaries, symbols, numbers, names and dependent nouns (こと, ため) are never glossed from JMdict. (Kana words Kuromoji splits, such as み + らい, are joined back first: see Word boundaries.) Names Kuromoji takes for common nouns (大橋 large bridge) get literal glosses.
 
 Glosses are converted to the snapshot's short learner style at import time (one sense, one short gloss, no brackets, no "to" on verbs, no leading article); the rules are documented in `scripts/jmdict-gloss-style.mjs`. `npm run glosses:update` re-imports from the [jmdict-simplified](https://github.com/scriptin/jmdict-simplified) release recorded in `src/glosses/jmdict-glosses-source.json` (the only online step); `npm run glosses:update -- <release tag>` picks another release, and `node --max-old-space-size=6144 scripts/import-jmdict-glosses.mjs /path/to/jmdict-eng.json <release tag>` imports a local file. Run it after `npm run readings:update`, using a JMdict release close to the reading index's.
 

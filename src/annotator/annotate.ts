@@ -2,11 +2,9 @@ import { spellingOverrides } from "../treatments/spelling-overrides";
 import { resolveJapaneseReadings } from '../readings/resolve-japanese-readings';
 import MyKuroshiro from "../tokenization/my-kuroshiro/core.js";
 import KuromojiAnalyzer from "kuroshiro-analyzer-kuromoji";
-import japaneseTokenRegroups from '../treatments/token-regroups';
 import { mergeJapaneseTeForms } from '../treatments/token-treatments';
 // Numbers and counters (readings by the number's last digit, dates, times, weekdays, counting glosses).
 import { applyJapaneseNumberTokens, applyJapaneseNumberReadings, applyJapaneseCounterGlosses } from '../treatments/numbers';
-import { regroupAnnotatedTokens } from '../shared/token-regrouping';
 // 〇 / × as marks (まる circle, ばつ cross) outside arithmetic and numerals.
 import { applyJapaneseMarks } from '../treatments/marks';
 import { applyJapaneseGlossTreatments } from '../glosses/treatments';
@@ -14,12 +12,12 @@ import {
 	applyJapaneseSBWordsGlosses,
 	getSnapshotJapaneseSBWords,
 	japaneseSBWordsGlossLookup,
+	japaneseSBWordsHasRow,
 } from '../snapshot/japanese-sb-words';
-import { applyJapaneseBaseFormGlosses, type JapaneseMorpheme } from '../glosses/base-form';
+import { applyJapaneseBaseFormGlosses } from '../glosses/base-form';
+import type { JapaneseMorpheme } from '../shared/morphemes';
 import { applyJapaneseJmdictGlosses, isJapaneseJmdictWord } from '../glosses/jmdict';
 import { mergeJapaneseDictionaryWords } from '../treatments/dictionary-merges';
-// Deliberate groupings (fixed phrases): the base-form fallback never splits or re-glosses them.
-const groupedTokens: ReadonlySet<string> = new Set(japaneseTokenRegroups);
 import type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from '../types';
 export { refreshJapaneseSBWordsSnapshot } from '../snapshot/japanese-sb-words';
 // Instantiate
@@ -193,10 +191,11 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	const words2Gloss = japaneseSBWordsGlossLookup(japaneseSBWords);
 	// Kuromoji's analysis of the whole text: parts of speech for merging, base forms for the gloss fallbacks.
 	const morphemes: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(text);
-	tokens = regroupAnnotatedTokens(tokens, japaneseTokenRegroups);
-	tokens = mergeJapaneseTeForms(tokens);
-	// Join pieces whose joined text is a words2 row or a JMdict noun (あり + ます, 路面 + 電車, のり + ば).
-	tokens = mergeJapaneseDictionaryWords(tokens, text, morphemes, word => words2Gloss(word) !== null, isJapaneseJmdictWord);
+	tokens = mergeJapaneseTeForms(tokens, morphemes);
+	// Join pieces whose joined text is a known unit: a words2 row or a JMdict noun (あり + ます, 背 + が + 高い, 路面 + 電車,
+	// のり + ば). This replaced the hand-written regroup list ("BRUTE MERGE").
+	const isOneMorpheme = (word: string) => kuroshiro._analyzer._analyzer.tokenize(word).length === 1; // Kuromoji's own reading
+	tokens = mergeJapaneseDictionaryWords(tokens, text, morphemes, word => words2Gloss(word) !== null, japaneseSBWordsHasRow(japaneseSBWords), isJapaneseJmdictWord, isOneMorpheme);
 	tokens = await resplitKnownTokens(tokens);
 	tokens = applyJapaneseNumberTokens(tokens);
 	tokens = resolveJapaneseReadings(tokens);
@@ -207,10 +206,10 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
 	// Fallback: an inflected word words2 has no row for takes its dictionary form's row (internal base form from
 	// Kuromoji), splitting off negative / desire endings so their meaning stays visible.
-	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, words2Gloss, groupedTokens);
+	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, words2Gloss);
 	// Fallback: a content word words2 still has no gloss for takes its JMdict gloss (offline, imported in house style),
 	// chosen by spelling and resolved reading; inflected words by their dictionary form.
-	tokens = applyJapaneseJmdictGlosses(tokens, text, morphemes, words2Gloss, groupedTokens);
+	tokens = applyJapaneseJmdictGlosses(tokens, text, morphemes, words2Gloss);
 	// Apply deterministic/context-aware overrides last so they remain stronger
 	// than a generic JapaneseSBWords match.
 	tokens = applyJapaneseGlossTreatments(tokens);

@@ -15,11 +15,10 @@
 import entries from '../readings/jmdict-furigana.json';
 import kanaGlosses from './jmdict-kana-glosses.json';
 import type { AnnotatedToken } from '../types';
-import { applyJapaneseBaseFormGlosses, type JapaneseMorpheme } from './base-form';
+import { applyJapaneseBaseFormGlosses } from './base-form';
+import { morphemeSpans, type JapaneseMorpheme } from '../shared/morphemes';
 export { default as japaneseGlossSource } from './jmdict-glosses-source.json';
 
-/** Kuromoji morphemes also carry the first part-of-speech detail (固有名詞, 非自立, 数 …). */
-type Morpheme = JapaneseMorpheme & { pos_detail_1?: string };
 
 const HAN = /\p{Script=Han}/u;
 const JAPANESE = /[぀-ヿ㐀-鿿々]/;
@@ -67,30 +66,19 @@ export function japaneseJmdictKanaGloss(text: string): string | null {
 	return (kanaGlosses as Record<string, string>)[text] ?? null;
 }
 
-/** Morphemes with their character spans in the text (word_position is 1-based; otherwise laid end to end). */
-function spans(morphemes: Morpheme[]) {
-	let at = 0;
-	return morphemes.map(m => {
-		const start = m.verbose?.word_position ? m.verbose.word_position - 1 : at;
-		at = start + m.surface_form.length;
-		return { ...m, start, end: at };
-	});
-}
-
 /**
  * Fill unglossed content-word tokens from JMdict. Tokens that already have a gloss are never changed.
  * @param tokens    annotated tokens (after words2 and the base-form fallback)
  * @param text      the annotated text (the tokens' texts joined)
  * @param morphemes Kuromoji's morphemes for the same text
  * @param words2    the words2 lookup (japaneseSBWordsGlossLookup), for endings split off inflected words
- * @param grouped   token texts that are deliberate groupings (the token-regroups list): never split
  */
 export function applyJapaneseJmdictGlosses(
-	tokens: AnnotatedToken[], text: string, morphemes: Morpheme[],
-	words2: (word: string) => string | null, grouped: ReadonlySet<string>,
+	tokens: AnnotatedToken[], text: string, morphemes: JapaneseMorpheme[],
+	words2: (word: string) => string | null,
 ): AnnotatedToken[] {
 	if (tokens.map(t => t.text).join('') !== text) return tokens; // tokens and text disagree: leave everything as is
-	const ms = spans(morphemes);
+	const ms = morphemeSpans(morphemes);
 	let at = 0;
 	const filled = tokens.map(token => {
 		const start = at, end = at + token.text.length;
@@ -101,11 +89,6 @@ export function applyJapaneseJmdictGlosses(
 		if (!first || SKIPPED_POS.has(first.pos) || SKIPPED_DETAIL.has(first.pos_detail_1 ?? '')) return token;
 		// a name (大橋, 新町) is not glossed; a dictionary compound that contains one is (水上 + バス: water bus)
 		if (overlapping.every(m => m.pos_detail_1 === '固有名詞')) return token;
-		// A kana word Kuromoji does not know comes apart into a kana prefix and a noun (みらい → み + らい, みほん → み + ほん)
-		// or a noun and ば (うりば → うり + ば). Such a fragment is not glossed.
-		const before = ms.find(m => m.end === start), after = ms.find(m => m.start === end);
-		if (!HAN.test(token.text) && before?.pos === '接頭詞' && !HAN.test(before.surface_form)) return token;
-		if (!HAN.test(token.text) && after?.surface_form === 'ば' && overlapping[overlapping.length - 1]!.pos === '名詞') return token;
 		const reading = token.phoneticToken?.map(p => p[1] ?? p[0]).join('') ?? null;
 		const gloss = HAN.test(token.text) ? japaneseJmdictGloss(token.text, reading) : japaneseJmdictKanaGloss(token.text);
 		return gloss ? { ...token, gloss } : token;
@@ -113,5 +96,5 @@ export function applyJapaneseJmdictGlosses(
 	// Inflected words: the dictionary form's JMdict gloss (with kanji only), through the base-form fallback's rules.
 	// Endings it splits off (ない, たい) are glossed from words2 only.
 	const baseGloss = (word: string) => words2(word) ?? (HAN.test(word) ? japaneseJmdictGloss(word) : null);
-	return applyJapaneseBaseFormGlosses(filled, text, morphemes, baseGloss, grouped);
+	return applyJapaneseBaseFormGlosses(filled, text, morphemes, baseGloss);
 }

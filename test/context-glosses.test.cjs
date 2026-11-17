@@ -1,5 +1,5 @@
 // Context senses (src/glosses/treatments.ts): common words whose words2 row gives a sense that is wrong where learners
-// meet them. Each rule fires only in its context; elsewhere the row's gloss stays (TODO.md lists the rows to fix).
+// meet them. Each rule fires only in its context; elsewhere the row's gloss stays (the rows themselves are fixed in words2).
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {annotate} = require('../dist');
@@ -32,7 +32,7 @@ test('角 on its own is かど, a corner; compounds keep their reading', async (
 	assert.equal((await token('三角', '三角')).phoneticToken.map(p => p[1]).join(''), 'さんかく');
 });
 
-test('普通: local (train) in a transit context, standard (licence) before 免許, the row elsewhere', async () => {
+test('普通: local (train) in a transit context, the row elsewhere; 普通免許 is one word', async () => {
 	assert.equal(await gloss('普通だけ止まる駅', '普通'), 'local (train)');
 	assert.equal(await gloss('8時7分の普通', '普通'), 'local (train)');
 	assert.equal(await gloss('普通免許', '普通免許'), "ordinary driver's license"); // one word now (dictionary-guided merging)
@@ -52,7 +52,6 @@ test('transit and direction senses, only in their context', async () => {
 	assert.equal(await gloss('大橋で降りて、電車に乗ります', '降りて'), 'get off');
 	assert.equal(await gloss('駅の発車案内を見ます', '案内'), 'information');
 	assert.equal(await gloss('駅の窓口できっぷを買います', '窓口'), 'ticket counter');
-	assert.equal(await gloss('フェリー乗り場', '乗り場'), 'pier');
 	assert.equal(await gloss('バスは各駅の前から出ます', '前'), 'front');
 	assert.equal(await gloss('5分前に着きます', '前'), 'before');
 	assert.equal(await gloss('高田に先に着くのは', '先'), 'first');
@@ -63,4 +62,7 @@ test('transit and direction senses, only in their context', async () => {
 	assert.equal(await gloss('新町〜海岸間で運休します', '間'), 'between');
 	assert.equal(await gloss('平日の7時台の電車', '台'), '(hour) range');
 	assert.equal(await gloss('レンタカーの予約確認書', '書'), 'document');
+	assert.equal(await gloss('花子さんが運転するとき、何が必要ですか。', 'とき'), 'when');
+	assert.equal(await gloss('この駅は急行が通過します', '通過'), 'passes (without stopping)');
+	assert.equal(await gloss('電車の線路', '線路'), 'track');
 });

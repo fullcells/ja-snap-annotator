@@ -35,7 +35,7 @@ test('applies Japanese token grouping and contextual gloss treatments', async ()
 	const capital = await annotate('王都', { latestSBWords: [] });
 	assert.deepEqual(capital.map(token => token.text), ['王都']);
 
-	const caution = await annotate('気をつけて', { latestSBWords: [] });
+	const caution = await annotate('気をつけて'); // one unit through its words2 row (no longer a regroup-list entry)
 	assert.deepEqual(caution.map(token => token.text), ['気をつけて']);
 
 	const annotatedTry = await annotate('言ってみ', { latestSBWords: [] });

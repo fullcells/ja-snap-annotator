@@ -1,5 +1,5 @@
 // Dictionary-guided merging (src/treatments/dictionary-merges.ts): adjacent tokens are joined when the joined text is a
-// words2 row or a JMdict noun, within part-of-speech limits; the regroup list keeps phrases, numbers and names.
+// words2 row or a JMdict noun, within part-of-speech limits; numbers belong to the numbers treatment.
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const {annotate} = require('../dist');
@@ -26,8 +26,8 @@ test('verb and auxiliary chains words2 knows are joined without a list entry', a
 	assert.ok((await texts('駅はどこですか')).includes('ですか')); // か tagged 副助詞／並立助詞／終助詞
 });
 
-test('never across case or topic particles, clause particles, numbers or counters', async () => {
-	assert.deepEqual(await texts('駅には'), ['駅', 'に', 'は']); // には stays apart, as the regroup list decided
+test('never across clause particles, numbers or counters; には is one token (its words2 row)', async () => {
+	assert.deepEqual(await texts('駅には'), ['駅', 'には']);
 	assert.ok((await texts('勉強すると')).includes('と')); // と joins clauses: not すると "then"
 	assert.ok((await texts('高いですが、')).includes('が')); // not ですが "but"
 	assert.ok((await texts('一つ目の信号')).includes('目')); // not 一つ目 "one-eyed": the numbers treatment owns it

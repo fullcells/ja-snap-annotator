@@ -1,7 +1,7 @@
 // Dictionary-guided merging: adjacent tokens are joined into one when the joined text is a unit the annotator knows.
 // Kuromoji splits more finely than a learner reads: あり + ます, でし + た, 路面 + 電車, のり + ば (seaweed + ば for
-// のりば, a boarding place), 背 + が + 高い, ハリー + ・ + ポッター. This replaces most of the hand-written regroup list
-// (src/treatments/token-regroups.ts, "BRUTE MERGE"): the units now live in data.
+// のりば, a boarding place), 背 + が + 高い, ハリー + ・ + ポッター. This replaced the hand-written regroup list
+// ("BRUTE MERGE"): the units now live in data (words2 rows and JMdict), not in code.
 //
 // Two dictionaries, longest match first, left to right:
 // - words2 (the snapshot rows): the house lexicon. A row is a unit with a known gloss: word forms (あります, でした,
@@ -15,17 +15,15 @@
 //   一つ目 would be JMdict's "one-eyed" and 18 + 歳未満 would lose its counter reading).
 // - Particles: inside a words2 phrase, any (背が高い, 名前を付け, 何でできて); as an ending, て, で or ば (して, 行けば,
 //   のりば; not と or が, which join clauses: すると, ですが) and a final か / よ / ね after an auxiliary or adjective
-//   (ですか, いいよ; not いる + か, "dolphin"). A particle at the start or end of a phrase is not joined: words2 has rows
-//   such as 私は, 前に and の隣に that are not units, so とは, の上, 上に, ことが stay on the regroup list until words2 is
-//   cleaned (TODO.md).
+//   (ですか, いいよ; not いる + か, "dolphin"). At the start or end of a JA→EN words2 row (とは, の上, 上に, ことが, には)
+//   only when Kuromoji also splits that row on its own: では, でも, なるほど, 時に and もの are single words to Kuromoji,
+//   so finding them split in the text means separate pieces (このアプリ + で + は, 何千 + も + の).
 // - Symbols only as ・ inside a words2 name; never whitespace or non-words. JMdict joins take nouns and prefixes only.
 //
 // The token splits (resplitKnownTokens) run after, so a merge they undo is undone as before: 何でできて (a row) is
 // re-split into 何 + でできて.
 import type { AnnotatedToken, PhoneticToken } from '../types';
-import type { JapaneseMorpheme } from '../glosses/base-form';
-
-type Morpheme = JapaneseMorpheme & { pos_detail_1?: string; pos_detail_2?: string };
+import { morphemeSpans, type JapaneseMorpheme as Morpheme } from '../shared/morphemes';
 
 /** The most tokens joined into one word. */
 const MAX_PIECES = 6;
@@ -37,23 +35,21 @@ const JAPANESE = /^[぀-ヿ㐀-鿿々〆ー]+$/u;
 /** Numbers as Kuromoji leaves them: 数 morphemes (3, 三), native counts (一つ, 二つ) and question words (いくつ, 何). */
 const NUMBER = /^(?:[一二三四五六七八九十]+つ|いくつ|何)$/u;
 
-/** Morphemes with their character spans in the text (word_position is 1-based; otherwise laid end to end). */
-function spans(morphemes: Morpheme[]) {
-	let at = 0;
-	return morphemes.map(m => {
-		const start = m.verbose?.word_position ? m.verbose.word_position - 1 : at;
-		at = start + m.surface_form.length;
-		return { ...m, start, end: at };
-	});
-}
-
-/** Whether these morphemes (in order) may form one word; nounsOnly for JMdict joins. */
-function joinable(ms: Morpheme[], nounsOnly: boolean): boolean {
+/**
+ * Whether these morphemes (in order) may form one word.
+ * - "jmdict": a JMdict noun: nouns and prefixes only (路面 + 電車, のり + ば).
+ * - "words2": a words2 word or phrase: particles inside it or as a word ending (背が高い, して, ですか).
+ * - "row": a JA→EN words2 row: also a particle at either end (とは, の上, 上に, ことが, には). The caller also checks that
+ *   Kuromoji splits the row on its own (see mergeJapaneseDictionaryWords).
+ */
+function joinable(ms: Morpheme[], mode: 'jmdict' | 'words2' | 'row'): boolean {
+	const nounsOnly = mode === 'jmdict';
 	return ms.every((m, i) => {
 		const inside = i > 0 && i < ms.length - 1;
 		if (m.pos === '記号') return !nounsOnly && inside && m.surface_form === '・'; // ハリー・ポッター
 		if (m.pos === '助詞') {
 			if (!nounsOnly && inside) return true; // a particle between two parts of a words2 phrase: 背が高い, 歯を磨く
+			if (mode === 'row') return true;
 			if (i === 0) return false;
 			if (m.pos_detail_1 === '接続助詞' && WORD_ENDINGS.has(m.surface_form)) return !nounsOnly || (i === ms.length - 1 && m.surface_form === 'ば'); // のりば
 			// sentence-final か is tagged 副助詞／並立助詞／終助詞
@@ -73,15 +69,22 @@ function joinable(ms: Morpheme[], nounsOnly: boolean): boolean {
  * @param tokens       annotated tokens (no glosses yet)
  * @param text         the annotated text (the tokens' texts joined)
  * @param morphemes    Kuromoji's morphemes for the same text
- * @param isWords2Word whether words2 has a row for a text
+ * @param isWords2Word whether words2 glosses a text (JA→EN rows, or EN→JA rows read in reverse)
+ * @param isWords2Row  whether words2 has a JA→EN row for exactly this text
  * @param isJmdictWord whether JMdict has a glossed word for a text
+ * @param isOneMorpheme whether Kuromoji reads a text on its own as a single morpheme
+ *
+ * A words2 row with a particle at either end joins only when Kuromoji also splits it on its own (に + は, の + 上,
+ * と + は). When Kuromoji knows the row as one word (では and でも as conjunctions, なるほど, 時に, もの, すると, いるか
+ * "dolphin"), finding it split in the text means separate pieces: このアプリ + で + は, 何千 + も + の, 高く + なる + ほど.
  */
 export function mergeJapaneseDictionaryWords(
 	tokens: AnnotatedToken[], text: string, morphemes: Morpheme[],
-	isWords2Word: (text: string) => boolean, isJmdictWord: (text: string) => boolean,
+	isWords2Word: (text: string) => boolean, isWords2Row: (text: string) => boolean, isJmdictWord: (text: string) => boolean,
+	isOneMorpheme: (text: string) => boolean,
 ): AnnotatedToken[] {
 	if (tokens.map(t => t.text).join('') !== text) return tokens; // tokens and text disagree: leave everything as is
-	const ms = spans(morphemes);
+	const ms = morphemeSpans(morphemes);
 	const starts: number[] = [];
 	tokens.reduce((at, t) => (starts.push(at), at + t.text.length), 0);
 	const piece = (i: number) => tokens[i]!.isWord === 1 && JAPANESE.test(tokens[i]!.text);
@@ -97,8 +100,10 @@ export function mergeJapaneseDictionaryWords(
 				const joined = tokens.slice(i, j + 1).map(t => t.text).join('');
 				const start = starts[i]!, end = start + joined.length;
 				const own = ms.filter(m => m.start < end && m.end > start);
-				const words2 = isWords2Word(joined) && joinable(own, false);
-				if (!words2 && !(isJmdictWord(joined) && joinable(own, true))) continue;
+				const edgeParticle = own[0]?.pos === '助詞' || own[own.length - 1]?.pos === '助詞';
+				const known = (isWords2Word(joined) && joinable(own, 'words2')) || (isJmdictWord(joined) && joinable(own, 'jmdict'))
+					|| (isWords2Row(joined) && joinable(own, 'row') && !(edgeParticle && isOneMorpheme(joined)));
+				if (!known) continue;
 				const phonetic: PhoneticToken = tokens.slice(i, j + 1).flatMap(t => t.phoneticToken ?? [[t.text]]);
 				out.push({ ...tokens[i]!, text: joined, isWord: 1, phoneticToken: phonetic });
 				i = j;

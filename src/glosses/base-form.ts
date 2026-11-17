@@ -5,37 +5,19 @@
 // - Fallback only: a token that already has a gloss (from words2, an override or an earlier step) is left alone.
 // - words2 only: the base form is looked up in the same words2 rows as surface forms, not in a dictionary.
 // - One inflected word only: the token must start with a verb or adjective and be exactly the morphemes Kuromoji found
-//   for it. Fixed phrases kept as one token (the token-regroups list, e.g. どうやって) are skipped.
+//   for it. Units merged from words2 rows (どうやって, 背が高い) already have a gloss, so they are never split.
 // - Significant endings keep their meaning: when the token also contains a negative (ない, ぬ) or a desire (たい), it is
 //   split into the root and the ending, each glossed from words2 (行かなかった → 行か go + なかった …), the way
 //   tokenization already splits 行か + ない. Other endings (て, た, たら, ます) stay part of the word.
 import type { AnnotatedToken, PhoneticPart } from '../types';
-
-/** A Kuromoji morpheme, as kuroshiro-analyzer-kuromoji's parse() returns it. */
-export type JapaneseMorpheme = {
-	surface_form: string;
-	pos: string;
-	basic_form: string;
-	verbose?: { word_position?: number };
-};
+import { morphemeSpans, type JapaneseMorpheme } from '../shared/morphemes';
+export type { JapaneseMorpheme } from '../shared/morphemes';
 
 const CONTENT_POS = new Set(['動詞', '形容詞']);
 // Endings whose meaning a reader needs (the basic form Kuromoji gives them), and the parts of speech they come as.
 const SIGNIFICANT_ENDINGS = new Set(['ない', 'ぬ', 'たい']);
 const ENDING_POS = new Set(['助動詞', '形容詞']);
 const JAPANESE = /[぀-ヿ㐀-鿿々]/;
-
-type Span = { start: number; end: number };
-
-/** Morphemes with their character spans in the text (word_position is 1-based; otherwise they are laid end to end). */
-function spans(morphemes: JapaneseMorpheme[]): (JapaneseMorpheme & Span)[] {
-	let at = 0;
-	return morphemes.map(m => {
-		const start = m.verbose?.word_position ? m.verbose.word_position - 1 : at;
-		at = start + m.surface_form.length;
-		return { ...m, start, end: at };
-	});
-}
 
 /** Split a token's reading parts at a character offset; null when a part (e.g. a kanji with its reading) straddles it. */
 function splitPhonetic(parts: PhoneticPart[] | null | undefined, offset: number): [PhoneticPart[], PhoneticPart[]] | null {
@@ -62,20 +44,19 @@ function splitPhonetic(parts: PhoneticPart[] | null | undefined, offset: number)
  * @param text     the annotated text (the tokens' texts joined)
  * @param morphemes Kuromoji's morphemes for the same text
  * @param glossOf  the words2 lookup (japaneseSBWordsGlossLookup)
- * @param grouped  token texts that are deliberate groupings (the token-regroups list): never touched
  */
 export function applyJapaneseBaseFormGlosses(
 	tokens: AnnotatedToken[], text: string, morphemes: JapaneseMorpheme[],
-	glossOf: (word: string) => string | null, grouped: ReadonlySet<string>,
+	glossOf: (word: string) => string | null,
 ): AnnotatedToken[] {
 	if (tokens.map(t => t.text).join('') !== text) return tokens; // tokens and text disagree: leave everything as is
-	const ms = spans(morphemes);
+	const ms = morphemeSpans(morphemes);
 	const out: AnnotatedToken[] = [];
 	let at = 0;
 	for (const token of tokens) {
 		const start = at, end = at + token.text.length;
 		at = end;
-		if (!token.isWord || token.gloss || grouped.has(token.text) || !JAPANESE.test(token.text)) { out.push(token); continue; }
+		if (!token.isWord || token.gloss || !JAPANESE.test(token.text)) { out.push(token); continue; }
 		const own = ms.filter(m => m.start >= start && m.end <= end);
 		// exactly this token's morphemes, starting with a verb or an adjective
 		if (!own.length || own[0].start !== start || own[own.length - 1].end !== end || !CONTENT_POS.has(own[0].pos)) { out.push(token); continue; }
