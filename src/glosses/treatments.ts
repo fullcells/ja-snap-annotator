@@ -159,6 +159,35 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 		token.gloss = "bound for";
 	});
 
+	// Transit and directions: senses learners meet on stations, timetables and maps.
+	const isTransit = TRANSIT.some(word => text.includes(word)) || ["乗り場","のりば","改札","きっぷ","切符","運賃"].some(word => text.includes(word));
+	const TIME = /^(?:[0-9０-９]+|時|分|日|月|年|時間|日間|週間|秒|ごろ)$/;
+	const afterTime = (index: number) => TIME.test(prevText(index) ?? "");
+	tokens.forEach((token, index) => {
+		const previous = prevText(index) ?? "", next = nextText(index) ?? "";
+		switch (token.text) {
+			case "ホーム": if (isTransit) token.gloss = "platform"; break;                 // このホームの電車 (not "home")
+			case "降り": case "降りて": case "降ります": case "降りる": if (isTransit) token.gloss = "get off"; break;
+			case "案内": if (isTransit) token.gloss = "information"; break;                  // 発車案内, 駅の案内
+			case "窓口": if (isTransit) token.gloss = "ticket counter"; break;               // 駅の窓口
+			case "乗り場":                                                                      // platform only for trains
+				if (/タクシー$/.test(previous)) token.gloss = "stand";
+				else if (/(?:フェリー|船|水上バス)$/.test(previous)) token.gloss = "pier";
+				else if (/バス$/.test(previous)) token.gloss = "stop";
+				break;
+			case "前": if (previous === "の") token.gloss = "front"; else if (afterTime(index)) token.gloss = "before"; break; // 駅の前, 5分前
+			case "先": if (next === "に") token.gloss = "first"; else if (previous === "の" || previous === "その") token.gloss = "ahead"; break; // 先に着く
+			case "着": if (afterTime(index)) token.gloss = "arrival"; break;                  // 08:13着, 9時50分着
+			case "より":                                    // 9時より (from); 平日より少ない (than); より高い keeps "more"
+				if (afterTime(index)) token.gloss = "from";
+				else if (tokens[index - 1]?.isWord && !PARTICLES.has(previous)) token.gloss = "than";
+				break;
+			case "間": if (previous === "の" || tokens.slice(Math.max(0, index - 3), index).some(t => /^[〜～]$/.test(t.text))) token.gloss = "between"; break; // 新町〜海岸間
+			case "台": if (previous === "時") token.gloss = "(hour) range"; break;             // 7時台の電車: trains in the 7 o'clock hour
+			case "書": if (tokens[index - 1]?.isWord && !PARTICLES.has(previous)) token.gloss = "document"; break; // 予約確認 + 書
+		}
+	});
+
 	// NUMBERS/COUNTERS
 	const japaneseNumberPattern = /^[0-9０-９〇零一二三四五六七八九十百千万億兆壱弐参拾]+$/;
 	const normalizeFullWidthDigits = (value: string): string =>
@@ -200,6 +229,8 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 		["羽", "(bird)", "(birds)"],
 		["冊", "(book)", "(books)"],
 		["時", "o'clock", "o'clock"],
+		["台", "(vehicle)", "(vehicles)"],
+		["組", "(set)", "(sets)"],
 
 		// ["頭", "large animal", "large animals"],
 		// ["台", "machine", "machines"],

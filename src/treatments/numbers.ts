@@ -6,7 +6,8 @@
 // Dates and days have their own native readings (ついたち, ふつか … とおか, はつか). Glosses give a counter its counting
 // sense (円 yen, 月 month, 番線 platform, 目 -th) instead of the noun's (circle, moon, wire, eye).
 //
-// applyJapaneseNumberTokens  joins/splits tokens (21,300 → one number; 分の → 分 + の after a number), before readings
+// applyJapaneseNumberTokens  joins/splits tokens (21,300 and 十 + 一 → one number; 何 + 回 → 何回; 分の → 分 + の after a
+//                             number), before readings
 // applyJapaneseNumberReadings  sets readings; run after dictionary reading resolution so the counting reading wins
 // applyJapaneseCounterGlosses  sets counting glosses; run after the snapshot and gloss treatments so it wins there too
 import type { AnnotatedToken, PhoneticToken } from '../types';
@@ -16,9 +17,26 @@ const HUNDRED: Record<number, string> = { 1: 'ひゃく', 3: 'さんびゃく', 
 const THOUSAND: Record<number, string> = { 1: 'せん', 3: 'さんぜん', 8: 'はっせん' };
 const LARGE = ['', 'まん', 'おく', 'ちょう'];
 
-/** ASCII or full-width digits as an integer (leading zeros and comma groups allowed), else null. */
+const KANJI_DIGITS: Record<string, number> = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+const KANJI_UNITS: Record<string, number> = { 十: 10, 百: 100, 千: 1000 };
+/** A number written in kanji numerals (十一, 二十四, 三百五十, 一万): its value, else null. 〇 is left to the marks treatment. */
+function parseKanjiNumber(text: string): number | null {
+	if (!/^[一二三四五六七八九十百千万]+$/.test(text) || text.startsWith('万')) return null; // 万 alone (万年) is not いちまん
+	let total = 0, section = 0, digit = 0;
+	for (const c of text) {
+		if (KANJI_DIGITS[c]) { if (digit) return null; digit = KANJI_DIGITS[c]; }       // 二二: not a number
+		else if (KANJI_UNITS[c]) { section += (digit || 1) * KANJI_UNITS[c]; digit = 0; }
+		else { total += (section + digit || 1) * 10000; section = 0; digit = 0; }    // 万
+	}
+	return total + section + digit;
+}
+export const isKanjiNumberText = (text: string | undefined) => !!text && parseKanjiNumber(text) !== null;
+
+/** ASCII or full-width digits as an integer (leading zeros and comma groups allowed), or kanji numerals; else null. */
 export function parseJapaneseNumber(text: string | undefined): number | null {
 	if (!text) return null;
+	const kanji = parseKanjiNumber(text);
+	if (kanji !== null) return kanji;
 	const ascii = text.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 	if (!/^\d{1,16}$/.test(ascii) && !/^\d{1,3}(?:,\d{3})+$/.test(ascii)) return null; // 130, 04, 21,300
 	return Number(ascii.replace(/,/g, ''));
@@ -126,6 +144,10 @@ export const JAPANESE_COUNTERS: Record<string, CounterRule> = {
 	'歳': kCounter('さい'),
 	'才': kCounter('さい'),
 	'冊': kCounter('さつ'),
+	'羽': plainCounter('わ'),
+	'度': plainCounter('ど'),
+	// 1 ひとくみ, 2 ふたくみ, then さんくみ, よんくみ …
+	'組': (n, base) => n === 1 ? { number: 'ひと', counter: 'くみ' } : n === 2 ? { number: 'ふた', counter: 'くみ' } : plainCounter('くみ', { 4: 'よん' })(n, base),
 	'週': kCounter('しゅう'),
 	'足': kCounter('そく', { voiced: 'ぞく' }),
 	'着': kCounter('ちゃく'),
@@ -161,8 +183,10 @@ export const JAPANESE_COUNTERS: Record<string, CounterRule> = {
 export const JAPANESE_COUNTER_GLOSSES: Record<string, string> = {
 	'円': 'yen', '月': 'month', '日': 'day', '日間': 'days', '時': "o'clock", '時間': 'hours',
 	'番線': 'platform', '番': 'number', '号': 'number', '号車': 'car (number)', '番目': '-th',
+	'丁目': 'block',
 };
-// 何 + counter as one word (Kuromoji's 何分 なにぶん "anyway", 何時 いつ): the counting reading and sense.
+// 何 (or 数, a few) + counter as one word, whether Kuromoji gives one token (何分 なにぶん "anyway", 何時 いつ) or two
+// (何 + 回, joined by applyJapaneseNumberTokens): the counting reading and sense.
 const QUESTION_COUNTERS: Record<string, { reading: [string, string][]; gloss: string }> = {
 	'何分': { reading: [['何', 'なん'], ['分', 'ぷん']], gloss: 'how many minutes' },
 	'何時': { reading: [['何', 'なん'], ['時', 'じ']], gloss: 'what time' },
@@ -171,6 +195,9 @@ const QUESTION_COUNTERS: Record<string, { reading: [string, string][]; gloss: st
 	'何人': { reading: [['何', 'なん'], ['人', 'にん']], gloss: 'how many people' },
 	'何回': { reading: [['何', 'なん'], ['回', 'かい']], gloss: 'how many times' },
 	'何番線': { reading: [['何', 'なん'], ['番', 'ばん'], ['線', 'せん']], gloss: 'which platform' },
+	'何羽': { reading: [['何', 'なん'], ['羽', 'わ']], gloss: 'how many (birds)' },
+	'何つ': { reading: [['何', 'いく'], ['つ', 'つ']], gloss: 'how many' }, // a written variant of いくつ
+	'数匹': { reading: [['数', 'すう'], ['匹', 'ひき']], gloss: 'a few (animals)' },
 };
 
 // Weekdays written as one character: in a range or list (月〜金, 土・日) or after a date (14日（金）).
@@ -196,8 +223,9 @@ function isDateContext(tokens: AnnotatedToken[], i: number): boolean {
 
 const phonetic = (text: string, reading: string): PhoneticToken => [[text, reading]];
 
-/** Token boundaries for numbers: join comma-grouped numbers (21,300) into one; after a number, split 分の into 分 + の
-    and 日生 (a date of birth) into 日 + 生. */
+/** Token boundaries for numbers: join comma-grouped numbers (21,300) and kanji numerals (十 + 一 → 十一) into one, and
+    何 + counter into one question word (何 + 回 → 何回); after a number, split 分の into 分 + の and 日生 (a date of birth)
+    into 日 + 生. */
 export function applyJapaneseNumberTokens(tokens: AnnotatedToken[]): AnnotatedToken[] {
 	const out: AnnotatedToken[] = [];
 	for (let i = 0; i < tokens.length; i++) {
@@ -209,6 +237,19 @@ export function applyJapaneseNumberTokens(tokens: AnnotatedToken[]): AnnotatedTo
 			const n = Number(text.replace(/,/g, ''));
 			out.push({ text, isWord: 1, phoneticToken: phonetic(text, japaneseNumberReading(n)), gloss: text });
 			i = j;
+			continue;
+		}
+		// 十 + 一 → 十一, 二 + 十 + 四 → 二十四: one number, read as one
+		if (isKanjiNumberText(t.text) && isKanjiNumberText(tokens[i + 1]?.text)) {
+			let text = t.text, j = i;
+			while (isKanjiNumberText(tokens[j + 1]?.text) && isKanjiNumberText(text + tokens[j + 1].text)) text += tokens[++j].text;
+			if (j > i) { out.push({ text, isWord: 1, phoneticToken: phonetic(text, japaneseNumberReading(parseJapaneseNumber(text)!)) }); i = j; continue; }
+		}
+		// 何 + 回 → 何回 (how many times), 数 + 匹 → 数匹 (a few animals)
+		const question = QUESTION_COUNTERS[t.text + (tokens[i + 1]?.text ?? '')];
+		if (question && tokens[i + 1]) {
+			out.push({ text: t.text + tokens[i + 1].text, isWord: 1, phoneticToken: question.reading });
+			i++;
 			continue;
 		}
 		// 01日生 (born on the 1st): Kuromoji reads 日生 as one word (にっせい); a date is 日 + 生(まれ)
@@ -263,6 +304,10 @@ export function applyJapaneseCounterGlosses(input: AnnotatedToken[]): AnnotatedT
 		const prev = tokens[i - 1]?.text;
 		const counting = isNumberText(prev) || prev === '何';
 		if (counting && JAPANESE_COUNTER_GLOSSES[t.text]) t.gloss = JAPANESE_COUNTER_GLOSSES[t.text];
+		// numbers in digits gloss as themselves (1, 21, 2026), as 21,300 does, not as words (one, twenty one)
+		if (t.isWord && /^[0-9０-９]+$/.test(t.text)) t.gloss = t.text.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
+		// a kanji number words2 has no row for (五十三, 二百十): its value, as Arabic numbers are glossed (21,300)
+		if (!t.gloss && t.isWord && isKanjiNumberText(t.text) && [...t.text].length > 1) t.gloss = String(parseJapaneseNumber(t.text));
 		// 一つ目, 二つ目, 3つ目, いくつ目 (which number): the ordinal -th
 		if (t.text === '目' && (/^(?:[一二三四五六七八九十]つ|いくつ|つ|番)$/.test(prev ?? ''))) t.gloss = '-th';
 	});

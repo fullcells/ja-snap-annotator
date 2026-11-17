@@ -16,7 +16,8 @@ import {
 	japaneseSBWordsGlossLookup,
 } from '../snapshot/japanese-sb-words';
 import { applyJapaneseBaseFormGlosses, type JapaneseMorpheme } from '../glosses/base-form';
-import { applyJapaneseJmdictGlosses } from '../glosses/jmdict';
+import { applyJapaneseJmdictGlosses, isJapaneseJmdictWord } from '../glosses/jmdict';
+import { mergeJapaneseDictionaryWords } from '../treatments/dictionary-merges';
 // Deliberate groupings (fixed phrases): the base-form fallback never splits or re-glosses them.
 const groupedTokens: ReadonlySet<string> = new Set(japaneseTokenRegroups);
 import type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from '../types';
@@ -188,8 +189,14 @@ export type JapaneseAnnotateOptions = {
 export async function annotate(text: string, options: JapaneseAnnotateOptions = {}): Promise<AnnotatedToken[]> {
 	// Tokenize And Spell
 	let tokens = await tokenizeAndSpellWithKuroshiro(text);
+	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
+	const words2Gloss = japaneseSBWordsGlossLookup(japaneseSBWords);
+	// Kuromoji's analysis of the whole text: parts of speech for merging, base forms for the gloss fallbacks.
+	const morphemes: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(text);
 	tokens = regroupAnnotatedTokens(tokens, japaneseTokenRegroups);
 	tokens = mergeJapaneseTeForms(tokens);
+	// Join pieces whose joined text is a words2 row or a JMdict noun (あり + ます, 路面 + 電車, のり + ば).
+	tokens = mergeJapaneseDictionaryWords(tokens, text, morphemes, word => words2Gloss(word) !== null, isJapaneseJmdictWord);
 	tokens = await resplitKnownTokens(tokens);
 	tokens = applyJapaneseNumberTokens(tokens);
 	tokens = resolveJapaneseReadings(tokens);
@@ -197,12 +204,9 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = applyJapaneseNumberReadings(tokens);
 	tokens = applyJapaneseMarks(tokens);
 	// Glossify
-	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
 	// Fallback: an inflected word words2 has no row for takes its dictionary form's row (internal base form from
 	// Kuromoji), splitting off negative / desire endings so their meaning stays visible.
-	const morphemes: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(text);
-	const words2Gloss = japaneseSBWordsGlossLookup(japaneseSBWords);
 	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, words2Gloss, groupedTokens);
 	// Fallback: a content word words2 still has no gloss for takes its JMdict gloss (offline, imported in house style),
 	// chosen by spelling and resolved reading; inflected words by their dictionary form.

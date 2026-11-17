@@ -35,7 +35,7 @@ test('角 on its own is かど, a corner; compounds keep their reading', async (
 test('普通: local (train) in a transit context, standard (licence) before 免許, the row elsewhere', async () => {
 	assert.equal(await gloss('普通だけ止まる駅', '普通'), 'local (train)');
 	assert.equal(await gloss('8時7分の普通', '普通'), 'local (train)');
-	assert.equal(await gloss('普通免許', '普通'), 'standard (licence)');
+	assert.equal(await gloss('普通免許', '普通免許'), "ordinary driver's license"); // one word now (dictionary-guided merging)
 	assert.ok(!['local (train)', 'standard (licence)'].includes(await gloss('普通は高い', '普通')));
 });
 
@@ -44,4 +44,23 @@ test('行き after a place: bound for; 行きます stays the verb', async () =>
 	assert.equal(await gloss('どこ行きですか', '行き'), 'bound for');
 	for (const text of ['空港に行きます', 'どうやって行きますか', '行きたいです'])
 		assert.notEqual(await gloss(text, '行き'), 'bound for', text);
+});
+
+test('transit and direction senses, only in their context', async () => {
+	assert.equal(await gloss('このホームの電車は急行です', 'ホーム'), 'platform');
+	assert.notEqual(await gloss('ホームに戻る', 'ホーム'), 'platform'); // no transit context: the row stays
+	assert.equal(await gloss('大橋で降りて、電車に乗ります', '降りて'), 'get off');
+	assert.equal(await gloss('駅の発車案内を見ます', '案内'), 'information');
+	assert.equal(await gloss('駅の窓口できっぷを買います', '窓口'), 'ticket counter');
+	assert.equal(await gloss('フェリー乗り場', '乗り場'), 'pier');
+	assert.equal(await gloss('バスは各駅の前から出ます', '前'), 'front');
+	assert.equal(await gloss('5分前に着きます', '前'), 'before');
+	assert.equal(await gloss('高田に先に着くのは', '先'), 'first');
+	assert.equal(await gloss('08:13着', '着'), 'arrival');
+	assert.equal(await gloss('平日より電車が少ないです', 'より'), 'than');
+	assert.equal(await gloss('9時より営業します', 'より'), 'from');
+	assert.notEqual(await gloss('通常、より高品質です', 'より'), 'than'); // より before an adjective: more
+	assert.equal(await gloss('新町〜海岸間で運休します', '間'), 'between');
+	assert.equal(await gloss('平日の7時台の電車', '台'), '(hour) range');
+	assert.equal(await gloss('レンタカーの予約確認書', '書'), 'document');
 });

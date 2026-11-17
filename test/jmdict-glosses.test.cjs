@@ -34,7 +34,7 @@ test('house style: one current sense, one short gloss', async () => {
 
 test('words words2 lacks get a JMdict gloss', async () => {
 	assert.equal(await gloss('路面電車の運賃はいくらですか。', '運賃'), 'fare');
-	assert.equal(await gloss('路面電車の運賃はいくらですか。', '路面'), 'road surface');
+	assert.equal(await gloss('路面が濡れています。', '路面'), 'road surface');
 	assert.equal(await gloss('交番の角を右に曲がってください。', '交番'), 'police box');
 	assert.equal(await gloss('市役所の前で待ちます。', '市役所'), 'municipal office');
 });
@@ -46,11 +46,6 @@ test('kana words: one gloss, or several words\' glosses joined by a slash', asyn
 	assert.equal(japaneseJmdictKanaGloss('あめ'), 'candy / rain'); // 飴 (usually kana) first, then 雨
 	assert.equal(japaneseJmdictKanaGloss('ため'), 'good'); // in the data, but a dependent noun: never applied
 	assert.notEqual(await gloss('観光のために行きます。', 'ため'), 'good');
-});
-
-test('fragments of a kana word Kuromoji splits are not glossed', async () => {
-	assert.equal(await gloss('みらい鉄道', 'らい'), null); // み + らい, not "since"
-	assert.equal(await gloss('きっぷうりば', 'うり'), null); // うり + ば, not "sale"
 });
 
 test('the entry is picked by reading', () => {

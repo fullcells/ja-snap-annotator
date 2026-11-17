@@ -53,6 +53,16 @@ The index is generated, not maintained as a word exception list. Run `npm run re
 
 Reading data is derived from JMdict (© Jim Breen / EDRDG) and Doublevil's JMdictFurigana, under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); see `THIRD_PARTY_NOTICES.md` and `licenses/`. The generated data remains under that license, separately from this library's source license. Consumer apps should retain source acknowledgement in their documentation or Sources/About page.
 
+## Word boundaries
+
+Kuromoji splits more finely than a learner reads (あり + ます, 路面 + 電車, のり + ば, 背 + が + 高い). After tokenization, adjacent tokens are joined into one when the joined text is a known unit (`src/treatments/dictionary-merges.ts`), longest match first, within limits read from Kuromoji's analysis:
+
+- **words2 rows** are the house lexicon of units: word forms (あります, ですか), compounds, phrases with a particle inside (背が高い, 歯を磨く), adverb phrases (どうやって) and names (ハリー・ポッター). A row with a particle at either end (私は, の上) is not trusted yet, because words2 still has such rows that are not units (TODO.md).
+- **JMdict** contributes nouns only: compounds and broken kana words (路面電車, のりば).
+- **Numbers** belong to the numbers treatment: kanji numerals are one number (十 + 一 → 十一), 何 + counter is one question word (何回, 何分), and other counters stay separate tokens with counting readings (3 + 羽, 一 + 冊 いっさつ).
+
+The hand-written regroup list (`src/treatments/token-regroups.ts`) is being retired: it keeps only the 35 entries that need a words2 change first (TODO.md, "Retire the regroup list").
+
 ## English glosses from JMdict
 
 A word the words2 snapshot has no row for (路面 road surface, 運賃 fare, 交番 police box, きっぷ ticket, エレベーター elevator) takes an English gloss from [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project), offline. It is always on, with no option. Order of precedence: words2 rows, then the dictionary form's words2 row (答えて → 答える), then JMdict, then the context rules and counter glosses, which still override all of them.

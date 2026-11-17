@@ -79,3 +79,20 @@ test('IDs and other zero-padded numbers without a counter stay as written; cache
 	const id = [{text: '000012345600', isWord: 1, phoneticToken: [['000012345600', '000012345600']]}];
 	assert.deepEqual(applyJapaneseNumberReadings(id), id);
 });
+
+test('kanji numerals are one number; question counters are one word; 羽, 組, 度 count', async () => {
+	const tokens = async text => (await annotate(text)).filter(t => t.isWord);
+	const t1 = await tokens('二十四時間');
+	assert.equal(t1[0].text, '二十四');
+	assert.deepEqual(t1[0].phoneticToken, [['二十四', 'にじゅうよ']]); // read with its counter: にじゅうよじかん
+	const t2 = await tokens('何回行きましたか');
+	assert.equal(t2[0].text, '何回');
+	assert.equal(t2[0].gloss, 'how many times');
+	const t3 = await tokens('鳥が3羽います');
+	assert.deepEqual(t3.slice(2, 4).map(t => [t.text, t.phoneticToken.map(p => p[1]).join(''), t.gloss]), [['3', 'さん', '3'], ['羽', 'わ', '(birds)']]);
+	const t4 = await tokens('本を一冊買いました');
+	assert.deepEqual(t4.slice(2, 4).map(t => t.phoneticToken.map(p => p[1]).join('')), ['いっ', 'さつ']);
+	const t5 = await tokens('二人で行きます');
+	assert.deepEqual(t5.slice(0, 2).map(t => t.phoneticToken.map(p => p[1]).join('')), ['ふた', 'り']);
+	assert.equal((await tokens('五十三'))[0].gloss, '53'); // no words2 row: its value
+});

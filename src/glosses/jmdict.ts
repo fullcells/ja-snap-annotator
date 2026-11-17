@@ -10,7 +10,7 @@
 // - Inflected words (答えて, 渡らない): their dictionary form, through the base-form fallback's own rules (one inflected
 //   word, negative / desire endings split off and glossed from words2). Only dictionary forms with kanji are looked
 //   up here; kana verbs and adjectives are left to words2.
-// - Content words only, by Kuromoji's analysis: particles, auxiliaries, symbols, fillers, numbers, proper nouns and
+// - Content words only, by Kuromoji's analysis: particles, auxiliaries, symbols, fillers, numbers, names and
 //   dependent nouns (こと, ため, ところ) are never glossed from JMdict; the house notation and words2 cover them.
 import entries from '../readings/jmdict-furigana.json';
 import kanaGlosses from './jmdict-kana-glosses.json';
@@ -24,7 +24,7 @@ type Morpheme = JapaneseMorpheme & { pos_detail_1?: string };
 const HAN = /\p{Script=Han}/u;
 const JAPANESE = /[぀-ヿ㐀-鿿々]/;
 const SKIPPED_POS = new Set(['助詞', '助動詞', '記号', 'フィラー', 'その他']);
-const SKIPPED_DETAIL = new Set(['固有名詞', '非自立', '数']);
+const SKIPPED_DETAIL = new Set(['非自立', '数']);
 const hira = (s: string) => s.normalize('NFKC').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 type Entry = [spelling: string, parts: [string, string?][], gloss?: string];
@@ -55,6 +55,11 @@ export function japaneseJmdictGloss(text: string, reading?: string | null): stri
 	const matching = reading ? options.find(o => readingOf(o) === hira(reading)) : undefined;
 	if (matching) return matching[2]!;
 	return options.every(o => o[2] === options[0]![2]) ? options[0]![2]! : null;
+}
+
+/** Whether JMdict has an English gloss for this text as one word (a spelling with kanji, or a kana form). */
+export function isJapaneseJmdictWord(text: string): boolean {
+	return HAN.test(text) ? entriesFor(text).length > 0 : japaneseJmdictKanaGloss(text) !== null;
 }
 
 /** The JMdict gloss of a word written in kana (several words' glosses joined by " / "); else null. */
@@ -94,7 +99,8 @@ export function applyJapaneseJmdictGlosses(
 		const overlapping = ms.filter(m => m.start < end && m.end > start);
 		const first = overlapping[0];
 		if (!first || SKIPPED_POS.has(first.pos) || SKIPPED_DETAIL.has(first.pos_detail_1 ?? '')) return token;
-		if (overlapping.some(m => m.pos_detail_1 === '固有名詞')) return token;
+		// a name (大橋, 新町) is not glossed; a dictionary compound that contains one is (水上 + バス: water bus)
+		if (overlapping.every(m => m.pos_detail_1 === '固有名詞')) return token;
 		// A kana word Kuromoji does not know comes apart into a kana prefix and a noun (みらい → み + らい, みほん → み + ほん)
 		// or a noun and ば (うりば → うり + ば). Such a fragment is not glossed.
 		const before = ms.find(m => m.end === start), after = ms.find(m => m.start === end);
