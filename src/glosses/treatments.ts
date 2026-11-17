@@ -101,6 +101,64 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 	// 	});
 	// }
 
+	// CONTEXT SENSES: common words whose words2 row gives a sense that is wrong where learners meet them (directions,
+	// transit, instructions). Each rule only fires in its context; elsewhere the row's gloss stays (see TODO.md for the
+	// rows themselves).
+	const PARTICLES = new Set(["は","が","を","に","へ","で","と","の","も","から","まで","より","や","か"]);
+	const nextText = (index: number) => tokens[index + 1]?.text;
+	const prevText = (index: number) => tokens[index - 1]?.text;
+
+	// 〇をつけて / ×をつけて: mark (with a circle), not attach.
+	const MARKS = new Set(["〇","○","◯","×","✕","✓","丸","印","しるし","チェック"]);
+	tokens.forEach((token, index) => {
+		if (/^つけ/.test(token.text) && prevText(index) === "を" && MARKS.has(prevText(index - 1) ?? "")) token.gloss = "mark";
+	});
+
+	// ほう: (the) one in a choice or comparison (正しいほうに, 急行のほうが), direction after の (出口のほうです).
+	tokens.forEach((token, index) => {
+		if (token.text !== "ほう") return;
+		const previous = prevText(index) ?? "";
+		if (nextText(index) === "が" || /[いるた]$/.test(previous)) token.gloss = "(the) one";
+		else if (previous === "の") token.gloss = "direction";
+	});
+
+	// 曲がる and its forms: turn, in directions (右に曲がって, 角を曲がります, 道を曲がり).
+	if (["右","左","角","信号","交差点","道","まっすぐ","ところ"].some(word => text.includes(word))) {
+		tokens.filter(token => /^曲が/.test(token.text)).forEach(token => (token.gloss = "turn"));
+	}
+
+	// 角 on its own: かど, a corner (カフェは角にあります). かく (angle, horn) is the reading inside compounds, which are
+	// tokens of their own (三角, 角度).
+	tokens.forEach((token, index) => {
+		if (token.text !== "角") return;
+		const next = nextText(index);
+		if (tokens.length === 1 || (next && PARTICLES.has(next)) || next === "です") {
+			token.gloss = "corner";
+			token.phoneticToken = [["角", "かど"]];
+		}
+	});
+
+	// 普通: a local train in a transit context (普通だけ止まる駅, 8時7分の普通); a standard licence (普通免許). On its own
+	// (a timetable cell) there is no context: the row's gloss stays.
+	const TRANSIT = ["急行","快速","特急","各駅","電車","列車","駅","番線","止まる","止まり","乗って","乗り","行き","発車","時刻","線"];
+	tokens.forEach((token, index) => {
+		if (token.text !== "普通") return;
+		if (nextText(index) === "免許") token.gloss = "standard (licence)";
+		// …or after a departure time: 8時7分の普通 (the 8:07 local)
+		else if (TRANSIT.some(word => text.includes(word)) || /[0-9０-９]+[時分]の普通/.test(text)) token.gloss = "local (train)";
+	});
+
+	// 行き after a place, not followed by a verb ending: bound for (新町行き, 空港行きの電車, どこ行きですか).
+	// 行きます / 行きたい stay the verb.
+	const VERB_ENDINGS = /^(ます|ますか|ません|ませんか|ました|ましょう|ましょうか|たい|たかった|なさい)/;
+	tokens.forEach((token, index) => {
+		if (token.text !== "行き") return;
+		const previous = tokens[index - 1];
+		if (!previous?.isWord || PARTICLES.has(previous.text) || ["どうやって","何で","まっすぐ","歩いて"].includes(previous.text)) return;
+		if (VERB_ENDINGS.test(nextText(index) ?? "")) return;
+		token.gloss = "bound for";
+	});
+
 	// NUMBERS/COUNTERS
 	const japaneseNumberPattern = /^[0-9０-９〇零一二三四五六七八九十百千万億兆壱弐参拾]+$/;
 	const normalizeFullWidthDigits = (value: string): string =>
