@@ -7,6 +7,8 @@ import { mergeJapaneseTeForms } from '../treatments/token-treatments';
 // Numbers and counters (readings by the number's last digit, dates, times, weekdays, counting glosses).
 import { applyJapaneseNumberTokens, applyJapaneseNumberReadings, applyJapaneseCounterGlosses } from '../treatments/numbers';
 import { regroupAnnotatedTokens } from '../shared/token-regrouping';
+// 〇 / × as marks (まる circle, ばつ cross) outside arithmetic and numerals.
+import { applyJapaneseMarks } from '../treatments/marks';
 import { applyJapaneseGlossTreatments } from '../glosses/treatments';
 import {
 	applyJapaneseSBWordsGlosses,
@@ -193,6 +195,7 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = resolveJapaneseReadings(tokens);
 	// Counting readings come after dictionary resolution, so 4時 is よじ and 3日間 みっかかん whatever the dictionary says.
 	tokens = applyJapaneseNumberReadings(tokens);
+	tokens = applyJapaneseMarks(tokens);
 	// Glossify
 	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
