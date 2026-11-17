@@ -1,0 +1,66 @@
+# Release on version bump: every push to main is built and tested; when package.json's version has no release yet,
+# the packed tarball (npm run release:pack) is published as GitHub release v<version>. Pushes that don't change the
+# version only run the checks. Consumers pin a release URL:
+#   https://github.com/fullcells/ja-snap-annotator/releases/download/v<version>/ja-snap-annotator-<version>.tgz
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # create the tag and the release
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Read version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check for an existing release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.version.outputs.version }}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "v${{ steps.version.outputs.version }} is already released; checks only."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # No Supabase settings in CI: the build keeps the checked-in words2 snapshot (snapshot:update:if-configured).
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Pack
+        if: steps.existing.outputs.exists == 'false'
+        run: npm run release:pack
+
+      - name: Publish release
+        if: steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" "releases/ja-snap-annotator-$VERSION.tgz" \
+            --target "$GITHUB_SHA" \
+            --title "ja-snap-annotator $VERSION" \
+            --generate-notes

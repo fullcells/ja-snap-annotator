@@ -78,4 +78,14 @@ Cost to consumers (measured against 0.1.2): the reading index grows from 2.2 to 
 
 Gloss data is derived from JMdict (© Jim Breen / EDRDG) via jmdict-simplified, under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), like the reading data. Glosses copied into stored annotations, word banks or printed material carry that licence and need attribution there too.
 
-Create a prebuilt GitHub release asset with `npm run release:pack`; the archive in `releases/` includes compiled code, dictionary data and licenses, without install-time build scripts.
+## Releases
+
+Releases are automatic. Every push to `main` runs the build and tests (`.github/workflows/release.yml`). When `package.json`'s version has no GitHub release yet, the workflow packs the tarball (`npm run release:pack`: compiled code, dictionary data and licenses, no install-time build scripts) and publishes it as release `v<version>`. Pushes that don't change the version only run the checks.
+
+To release: raise the version (`npm version minor --no-git-tag-version`, or patch / major), commit, push. Consumers pin the release URL, for example:
+
+```json
+"ja-snap-annotator": "https://github.com/fullcells/ja-snap-annotator/releases/download/v0.2.0/ja-snap-annotator-0.2.0.tgz"
+```
+
+Pin a version rather than "latest": annotations are generated data, and a new annotator changes readings, glosses and boundaries, so each consumer moves to a new release deliberately (install, re-annotate, review the diff). `npm run release:pack` still builds the same tarball locally into `releases/`.
