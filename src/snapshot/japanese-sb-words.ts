@@ -227,9 +227,12 @@ function preferredRow(rows: JapaneseSBWords, target: (row: SBWordRow2) => string
 
 // Mirrors the existing SBWords preference order: direct JA→EN first, followed
 // by reverse EN→JA, preferring verified and lowercase English entries.
-export function applyJapaneseSBWordsGlosses(tokens: AnnotatedToken[], rows: JapaneseSBWords): AnnotatedToken[] {
-	// Build indexes once for this annotation rather than scanning all ~7,800
-	// rows separately for every token.
+// The lookup is built once per rows array (cached), so other steps (the base-form fallback) can reuse it.
+const glossLookups = new WeakMap<JapaneseSBWords, (word: string) => string | null>();
+export function japaneseSBWordsGlossLookup(rows: JapaneseSBWords): (word: string) => string | null {
+	const cached = glossLookups.get(rows);
+	if (cached) return cached;
+	// Build indexes once rather than scanning all ~7,800 rows separately for every token.
 	const directByWord = new Map<string, JapaneseSBWords>();
 	const reverseByJapaneseGloss = new Map<string, JapaneseSBWords>();
 	for (const row of rows) {
@@ -241,15 +244,24 @@ export function applyJapaneseSBWordsGlosses(tokens: AnnotatedToken[], rows: Japa
 			reverseByJapaneseGloss.set(key, [...(reverseByJapaneseGloss.get(key) ?? []), row]);
 		}
 	}
+	const lookup = (word: string): string | null => {
+		const key = word.toLowerCase();
+		const direct = preferredRow(directByWord.get(key) ?? [], row => row.gloss);
+		if (direct) return direct.gloss;
+		const reverse = preferredRow(reverseByJapaneseGloss.get(key) ?? [], row => row.word);
+		return reverse ? reverse.word : null;
+	};
+	glossLookups.set(rows, lookup);
+	return lookup;
+}
 
+export function applyJapaneseSBWordsGlosses(tokens: AnnotatedToken[], rows: JapaneseSBWords): AnnotatedToken[] {
+	const glossOf = japaneseSBWordsGlossLookup(rows);
 	return tokens.map(token => {
 		// Non-words (for example `。`) intentionally keep null/absent glosses.
 		// Existing deterministic/contextual glosses are also not overwritten.
 		if (!token.isWord || token.gloss) return token;
-		const key = token.text.toLowerCase();
-		const direct = preferredRow(directByWord.get(key) ?? [], row => row.gloss);
-		if (direct) return { ...token, gloss: direct.gloss };
-		const reverse = preferredRow(reverseByJapaneseGloss.get(key) ?? [], row => row.word);
-		return reverse ? { ...token, gloss: reverse.word } : token;
+		const gloss = glossOf(token.text);
+		return gloss ? { ...token, gloss } : token;
 	});
 }

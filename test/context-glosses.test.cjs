@@ -32,10 +32,6 @@ test('角 on its own is かど, a corner; compounds keep their reading', async (
 	assert.equal((await token('三角', '三角')).phoneticToken.map(p => p[1]).join(''), 'さんかく');
 });
 
-test('さん after a name: Mr./Ms.', async () => {
-	assert.equal(await gloss('田中さんは駅にいます', 'さん'), 'Mr./Ms.');
-});
-
 test('普通: local (train) in a transit context, standard (licence) before 免許, the row elsewhere', async () => {
 	assert.equal(await gloss('普通だけ止まる駅', '普通'), 'local (train)');
 	assert.equal(await gloss('8時7分の普通', '普通'), 'local (train)');

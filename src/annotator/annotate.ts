@@ -11,7 +11,11 @@ import { applyJapaneseGlossTreatments } from '../glosses/treatments';
 import {
 	applyJapaneseSBWordsGlosses,
 	getSnapshotJapaneseSBWords,
+	japaneseSBWordsGlossLookup,
 } from '../snapshot/japanese-sb-words';
+import { applyJapaneseBaseFormGlosses, type JapaneseMorpheme } from '../glosses/base-form';
+// Deliberate groupings (fixed phrases): the base-form fallback never splits or re-glosses them.
+const groupedTokens: ReadonlySet<string> = new Set(japaneseTokenRegroups);
 import type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from '../types';
 export { refreshJapaneseSBWordsSnapshot } from '../snapshot/japanese-sb-words';
 // Instantiate
@@ -191,6 +195,10 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	// Glossify
 	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
+	// Fallback: an inflected word words2 has no row for takes its dictionary form's row (internal base form from
+	// Kuromoji), splitting off negative / desire endings so their meaning stays visible.
+	const morphemes: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(text);
+	tokens = applyJapaneseBaseFormGlosses(tokens, text, morphemes, japaneseSBWordsGlossLookup(japaneseSBWords), groupedTokens);
 	// Apply deterministic/context-aware overrides last so they remain stronger
 	// than a generic JapaneseSBWords match.
 	tokens = applyJapaneseGlossTreatments(tokens);
