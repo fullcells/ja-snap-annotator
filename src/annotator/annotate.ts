@@ -4,6 +4,8 @@ import MyKuroshiro from "../tokenization/my-kuroshiro/core.js";
 import KuromojiAnalyzer from "kuroshiro-analyzer-kuromoji";
 import japaneseTokenRegroups from '../treatments/token-regroups';
 import { mergeJapaneseTeForms } from '../treatments/token-treatments';
+// Numbers and counters (readings by the number's last digit, dates, times, weekdays, counting glosses).
+import { applyJapaneseNumberTokens, applyJapaneseNumberReadings, applyJapaneseCounterGlosses } from '../treatments/numbers';
 import { regroupAnnotatedTokens } from '../shared/token-regrouping';
 import { applyJapaneseGlossTreatments } from '../glosses/treatments';
 import {
@@ -75,47 +77,6 @@ const tokenSplits: Record<string, string[]> = {
 const regexEmoji = /^(\p{Extended_Pictographic}|(\p{Regional_Indicator}{2}))/u; // Helps ensure emojis do not get split during phonetics reformat.
 const japaneseNumerals = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
 const japaneseLargeUnits = ['', '万', '億', '兆', '京', '垓'];
-type CounterReading = { number?: string; counter?: string };
-// Contextual readings for a number followed by a separate counter token. Some
-// counters change their initial consonant, so both tokens can need an override.
-const counterReadings: Record<string, Record<string, CounterReading>> = {
-	'つ': {
-		'1': { number: 'ひと' }, '2': { number: 'ふた' }, '3': { number: 'みっ' }, '4': { number: 'よっ' }, '5': { number: 'いつ' },
-		'6': { number: 'むっ' }, '7': { number: 'なな' }, '8': { number: 'やっ' }, '9': { number: 'ここの' }, '10': { number: 'とお' },
-	},
-	'人': {
-		'1': { number: 'ひと', counter: 'り' }, '2': { number: 'ふた', counter: 'り' },
-		'7': { number: 'しち' },
-	},
-	'本': {
-		'1': { number: 'いっ', counter: 'ぽん' }, '3': { number: 'さん', counter: 'ぼん' },
-		'6': { number: 'ろっ', counter: 'ぽん' }, '8': { number: 'はっ', counter: 'ぽん' }, '10': { number: 'じゅっ', counter: 'ぽん' },
-	},
-	'個': {
-		'1': { number: 'いっ' }, '6': { number: 'ろっ' }, '8': { number: 'はっ' }, '10': { number: 'じゅっ' },
-	},
-	'回': {
-		'1': { number: 'いっ' }, '6': { number: 'ろっ' }, '8': { number: 'はっ' }, '10': { number: 'じゅっ' },
-	},
-	'匹': {
-		'1': { number: 'いっ', counter: 'ぴき' }, '3': { number: 'さん', counter: 'びき' },
-		'6': { number: 'ろっ', counter: 'ぴき' }, '8': { number: 'はっ', counter: 'ぴき' }, '10': { number: 'じゅっ', counter: 'ぴき' },
-	},
-	'分': {
-		'1': { number: 'いっ', counter: 'ぷん' }, '3': { number: 'さん', counter: 'ぷん' },
-		'6': { number: 'ろっ', counter: 'ぷん' }, '8': { number: 'はっ', counter: 'ぷん' }, '10': { number: 'じゅっ', counter: 'ぷん' },
-	},
-	'歳': {
-		'1': { number: 'いっ' }, '8': { number: 'はっ' }, '10': { number: 'じゅっ' },
-	},
-	'才': {
-		'1': { number: 'いっ' }, '8': { number: 'はっ' }, '10': { number: 'じゅっ' },
-	},
-	'月': {
-		'*': { counter: 'がつ' },
-	},
-};
-
 const withPhoneticToken = (token: AnnotatedToken, phoneticToken: PhoneticToken | null): AnnotatedToken => ({
 	...token,
 	phoneticToken,
@@ -169,14 +130,6 @@ async function jaTokenToPhoneticTokenWithArabicNumeral(jaToken: any): Promise<Ph
 	return [[jaToken.surfaceForm, reading]];
 }
 
-function getCounterReading(counterText: string | undefined, numberText: string | undefined): CounterReading | undefined {
-	if (!counterText || !numberText) return undefined;
-	const readingsForCounter = counterReadings[counterText];
-	if (!readingsForCounter) return undefined;
-	return readingsForCounter[numberText]
-		?? (/^(?:0|[1-9]\d*)$/.test(numberText) ? readingsForCounter['*'] : undefined);
-}
-
 async function tokenizeAndSpellWithKuroshiro(text: string): Promise<AnnotatedToken[]> {
 	// Wait until Kuroshiro has initialized, then proceed.
 	await ensureKuroshiroInitialized();
@@ -199,8 +152,6 @@ async function tokenizeAndSpellWithKuroshiro(text: string): Promise<AnnotatedTok
 		const isDecimalPoint = jaToken.surfaceForm === '.'
 			&& /^(?:0|[1-9]\d*)$/.test(jaTokens[index - 1]?.surfaceForm ?? '')
 			&& /^(?:0|[1-9]\d*)$/.test(jaTokens[index + 1]?.surfaceForm ?? '');
-		const contextualNumberReading = getCounterReading(jaTokens[index + 1]?.surfaceForm, jaToken.surfaceForm);
-		const contextualCounterReading = getCounterReading(jaToken.surfaceForm, jaTokens[index - 1]?.surfaceForm);
 		if (isDecimalPoint) is_word = true;
 
 		// DETERMINE PHONETICTOKEN
@@ -211,8 +162,6 @@ async function tokenizeAndSpellWithKuroshiro(text: string): Promise<AnnotatedTok
 
 		if (isDecimalPoint) return withPhoneticToken(annotatedToken, [['.', 'てん']]);
 		if (symbolSpelling) return withPhoneticToken(annotatedToken, [[jaToken.surfaceForm, symbolSpelling]]);
-		if (contextualNumberReading?.number) return withPhoneticToken(annotatedToken, [[jaToken.surfaceForm, contextualNumberReading.number]]);
-		if (contextualCounterReading?.counter) return withPhoneticToken(annotatedToken, [[jaToken.surfaceForm, contextualCounterReading.counter]]);
 
 		return is_word
 			? withPhoneticToken(annotatedToken, await jaTokenToPhoneticTokenWithArabicNumeral(jaToken))
@@ -235,13 +184,18 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = regroupAnnotatedTokens(tokens, japaneseTokenRegroups);
 	tokens = mergeJapaneseTeForms(tokens);
 	tokens = await resplitKnownTokens(tokens);
+	tokens = applyJapaneseNumberTokens(tokens);
 	tokens = resolveJapaneseReadings(tokens);
+	// Counting readings come after dictionary resolution, so 4時 is よじ and 3日間 みっかかん whatever the dictionary says.
+	tokens = applyJapaneseNumberReadings(tokens);
 	// Glossify
 	const japaneseSBWords = options.latestSBWords ?? await getSnapshotJapaneseSBWords();
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);
 	// Apply deterministic/context-aware overrides last so they remain stronger
 	// than a generic JapaneseSBWords match.
 	tokens = applyJapaneseGlossTreatments(tokens);
+	// A counter after a number means its counting sense (円 yen, 月 month), stronger than the snapshot's noun gloss.
+	tokens = applyJapaneseCounterGlosses(tokens);
 	// Output
 	return tokens;
 }
