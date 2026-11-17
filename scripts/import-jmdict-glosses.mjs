@@ -68,11 +68,12 @@ const updated = index.map(([text, parts]) => {
 	return gloss ? [text, parts, gloss] : [text, parts];
 });
 
-// 2. words written in kana (エレベーター, きっぷ, まっすぐ), keyed as written. A kana form is glossed only when it points to
-// one word: of the entries that have it as a common kana form (JMdict's priority tags), there must be exactly one
-// (きっぷ: 切符 ticket; かど is 角 corner and 門 gate, so none). With no common entry, exactly one entry may have it,
-// and it must be written in kana (a kana-only word, or a sense marked "usually kana"). A kana form shared with a
-// function word (でも, ため) counts as ambiguous too. Single kana are left out: they are mostly particles.
+// 2. words written in kana (エレベーター, きっぷ, まっすぐ), keyed as written. The words a kana form may be: the entries
+// that have it as a common kana form (JMdict's priority tags); with none, the entries written in kana (a kana-only word,
+// or a sense marked "usually kana"). One word gives its gloss (きっぷ: 切符 ticket); several give their distinct
+// glosses joined by " / ", words usually written in kana first, then in JMdict order (かど: 角 corner, 門 gate →
+// "corner / gate"). Function words (でも, ため) add no gloss of their own. Single kana are left out: they are mostly
+// particles.
 const byKana = new Map();
 for (const entry of jmdict.words) for (const r of entry.kana) {
 	if ([...r.text].length < 2) continue;
@@ -80,17 +81,22 @@ for (const entry of jmdict.words) for (const r of entry.kana) {
 	const inKana = !entry.kanji.length || entry.sense.some(s => s.misc.includes('uk') && (s.appliesToKana.includes('*') || s.appliesToKana.includes(r.text)));
 	(byKana.get(r.text) ?? byKana.set(r.text, []).get(r.text)).push({ entry, kanji, common: r.common, inKana });
 }
+/** A candidate's gloss: a word usually written in kana takes its kana sense; others their sense for the kanji spelling. */
+function kanaCandidateGloss(c, kana) {
+	const uk = c.inKana && c.entry.kanji.length ? c.entry.sense.find(s => s.misc.includes('uk')) : null;
+	return uk ? entryGloss({ ...c.entry, sense: [uk, ...c.entry.sense.filter(s => s !== uk)] }, null, kana)
+		: entryGloss(c.entry, c.kanji, kana);
+}
 const kanaGlosses = new Map();
+let severalWords = 0;
 for (const [kana, list] of byKana) {
-	const entries = new Set(list.map(c => c.entry)), common = list.filter(c => c.common);
-	const only = common.length ? (new Set(common.map(c => c.entry)).size === 1 ? common[0] : null)
-		: (entries.size === 1 && list[0].inKana ? list[0] : null);
-	if (!only) continue;
-	// a word usually written in kana takes its kana sense; others their sense for the kanji spelling
-	const uk = only.inKana && only.entry.kanji.length ? only.entry.sense.find(s => s.misc.includes('uk')) : null;
-	const gloss = uk ? entryGloss({ ...only.entry, sense: [uk, ...only.entry.sense.filter(s => s !== uk)] }, null, kana)
-		: entryGloss(only.entry, only.kanji, kana);
-	if (gloss) kanaGlosses.set(kana, gloss);
+	const common = list.filter(c => c.common);
+	const words = [...new Map((common.length ? common : list.filter(c => c.inKana)).map(c => [c.entry, c])).values()]
+		.sort((a, b) => Number(b.inKana) - Number(a.inKana));
+	const glosses = [...new Set(words.map(c => kanaCandidateGloss(c, kana)).filter(Boolean))];
+	if (!glosses.length) continue;
+	if (glosses.length > 1) severalWords++;
+	kanaGlosses.set(kana, glosses.join(' / '));
 }
 const kanaObject = Object.fromEntries([...kanaGlosses].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 
@@ -99,8 +105,8 @@ await mkdir('src/glosses', { recursive: true });
 await writeFile('src/glosses/jmdict-kana-glosses.json', JSON.stringify(kanaObject));
 await writeFile(SOURCE_FILE, JSON.stringify({
 	tag, source, sha256, dictDate: jmdict.dictDate, jmdictVersion: jmdict.version, words: jmdict.words.length,
-	readingIndexGlosses: glossed, readingIndexEntries: index.length, kanaGlosses: kanaGlosses.size,
+	readingIndexGlosses: glossed, readingIndexEntries: index.length, kanaGlosses: kanaGlosses.size, kanaGlossesWithSeveralWords: severalWords,
 	license: 'CC-BY-SA-4.0', attribution: 'JMdict © EDRDG / Jim Breen; JSON conversion by jmdict-simplified (scriptin).',
 	documentation: 'https://github.com/scriptin/jmdict-simplified', licenseUrl: 'https://www.edrdg.org/edrdg/licence.html',
 }, null, 2) + '\n');
-console.log(`JMdict ${jmdict.dictDate}: glosses for ${glossed} of ${index.length} reading-index entries, ${kanaGlosses.size} kana words.`);
+console.log(`JMdict ${jmdict.dictDate}: glosses for ${glossed} of ${index.length} reading-index entries, ${kanaGlosses.size} kana words (${severalWords} with several).`);

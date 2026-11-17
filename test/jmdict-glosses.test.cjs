@@ -39,10 +39,11 @@ test('words words2 lacks get a JMdict gloss', async () => {
 	assert.equal(await gloss('市役所の前で待ちます。', '市役所'), 'municipal office');
 });
 
-test('kana words: one word per kana form', async () => {
+test('kana words: one gloss, or several words\' glosses joined by a slash', async () => {
 	assert.equal(await gloss('きっぷを買います。', 'きっぷ'), 'ticket');
 	assert.equal(await gloss('エレベーターで行きます。', 'エレベーター'), 'elevator');
-	assert.equal(japaneseJmdictKanaGloss('かど'), null); // 角 corner, 門 gate
+	assert.equal(japaneseJmdictKanaGloss('かど'), 'excessive / corner'); // 過度, 角
+	assert.equal(japaneseJmdictKanaGloss('あめ'), 'candy / rain'); // 飴 (usually kana) first, then 雨
 	assert.equal(japaneseJmdictKanaGloss('ため'), 'good'); // in the data, but a dependent noun: never applied
 	assert.notEqual(await gloss('観光のために行きます。', 'ため'), 'good');
 });

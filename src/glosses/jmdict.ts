@@ -5,7 +5,8 @@
 // - Words with kanji: the gloss column of the JMdict reading index (src/readings/jmdict-furigana.json), picked by the
 //   token's spelling AND its resolved reading (角 かど corner, 角 かく angle). Without a reading match, a spelling's
 //   gloss is used only when all its readings agree. A wrong reading therefore gives a wrong gloss, or none.
-// - Words in kana: src/glosses/jmdict-kana-glosses.json, which holds only kana forms that point to one word.
+// - Words in kana: src/glosses/jmdict-kana-glosses.json. A kana form that may be several words has their glosses
+//   joined by " / " (かど: "excessive / corner").
 // - Inflected words (答えて, 渡らない): their dictionary form, through the base-form fallback's own rules (one inflected
 //   word, negative / desire endings split off and glossed from words2). Only dictionary forms with kanji are looked
 //   up here; kana verbs and adjectives are left to words2.
@@ -56,7 +57,7 @@ export function japaneseJmdictGloss(text: string, reading?: string | null): stri
 	return options.every(o => o[2] === options[0]![2]) ? options[0]![2]! : null;
 }
 
-/** The JMdict gloss of a word written in kana, when that kana form points to one word; else null. */
+/** The JMdict gloss of a word written in kana (several words' glosses joined by " / "); else null. */
 export function japaneseJmdictKanaGloss(text: string): string | null {
 	return (kanaGlosses as Record<string, string>)[text] ?? null;
 }

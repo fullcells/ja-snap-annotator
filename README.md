@@ -58,7 +58,7 @@ Reading data is derived from JMdict (© Jim Breen / EDRDG) and Doublevil's JMdic
 A word the words2 snapshot has no row for (路面 road surface, 運賃 fare, 交番 police box, きっぷ ticket, エレベーター elevator) takes an English gloss from [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project), offline. It is always on, with no option. Order of precedence: words2 rows, then the dictionary form's words2 row (答えて → 答える), then JMdict, then the context rules and counter glosses, which still override all of them.
 
 - **Words with kanji** use a gloss column added to the reading index (`src/readings/jmdict-furigana.json`), picked by spelling *and* resolved reading (角 かど corner, 角 かく angle). Without a matching reading, a spelling's gloss is used only when all its readings agree, so a wrong reading gives a wrong gloss or none.
-- **Words in kana** use `src/glosses/jmdict-kana-glosses.json`, which holds only kana forms that point to one word (かど, both 角 and 門, has none).
+- **Words in kana** use `src/glosses/jmdict-kana-glosses.json`, keyed as written. A kana form that may be several words gets all their glosses, joined by " / ", words usually written in kana first (かど, 過度 or 角: "excessive / corner"; あめ: "candy / rain").
 - **Inflected words** use their dictionary form's gloss with the base-form fallback's rules (kanji dictionary forms only).
 - **Content words only:** particles, auxiliaries, symbols, numbers, proper nouns and dependent nouns (こと, ため) are never glossed from JMdict, nor are fragments of a kana word Kuromoji has split (み + らい, うり + ば). Names Kuromoji takes for common nouns (大橋 large bridge) get literal glosses.
 
