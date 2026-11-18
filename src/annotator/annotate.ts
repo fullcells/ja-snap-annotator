@@ -8,6 +8,7 @@ import { applyJapaneseNumberTokens, applyJapaneseNumberReadings, applyJapaneseCo
 // 〇 / × as marks (まる circle, ばつ cross) outside arithmetic and numerals.
 import { applyJapaneseMarks } from '../treatments/marks';
 import { applyJapaneseGlossTreatments } from '../glosses/treatments';
+import { applyJapaneseContextGlosses } from '../glosses/context-glosses';
 import {
 	applyJapaneseSBWordsGlosses,
 	getSnapshotJapaneseSBWords,
@@ -213,6 +214,9 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	// Apply deterministic/context-aware overrides last so they remain stronger
 	// than a generic JapaneseSBWords match.
 	tokens = applyJapaneseGlossTreatments(tokens);
+	// Grammatical context (Kuromoji's parts of speech and dictionary forms): に, と, でも by their verb or question word, and a
+	// few words by their neighbours (人に聞く ask, よく知らない well, 旅行中 during). Only on explicit evidence.
+	tokens = applyJapaneseContextGlosses(tokens, morphemes);
 	// A counter after a number means its counting sense (円 yen, 月 month), stronger than the snapshot's noun gloss.
 	tokens = applyJapaneseCounterGlosses(tokens);
 	// Output

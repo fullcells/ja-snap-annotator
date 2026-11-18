@@ -63,6 +63,17 @@ Kuromoji splits more finely than a learner reads (あり + ます, 路面 + 電�
 
 This replaced the hand-written regroup list ("BRUTE MERGE"). To make something one token, add a words2 row for it; to split something that Kuromoji joins, use `tokenSplits` in `src/annotator/annotate.ts`.
 
+## Grammatical context glosses
+
+Particles and a few common words take their sense from the words around them, decided from Kuromoji's analysis of the whole text (parts of speech, dictionary forms) in `src/glosses/context-glosses.ts`. It runs after the other context rules, so it is the strongest gloss for the tokens it touches.
+
+- **に by its verb:** on before 乗る (電車に乗ります); to before verbs of motion (行く, 来る, 帰る, 曲がる …) and of telling (聞く, 教える, 連絡する …); per between a period and a count (週に一回, and 月 there is month).
+- **と with** between a noun and a verb of doing something together (誰と旅行したい, 人と会う, 友達と一緒に).
+- **でも -ever** after a question word (どの席でも, 何でも).
+- **Words:** 聞く after に is ask (人に聞きます); よく before a verb of knowing is well (よく知りません); 中 read ちゅう as a suffix is during (旅行中); この/その/あの辺 is area; 困った before とき/時/場合 is in trouble.
+
+Underfit on purpose: a rule changes a gloss only on that explicit evidence, and everything else keeps the gloss it had. A fragment without its verb (家族と) and に after a time or adverbial word (前に, ときに, 一緒に, 3時に) are left alone. A sense that is wrong in every context belongs in the words2 row instead (方角 is glossed angle there).
+
 ## English glosses from JMdict
 
 A word the words2 snapshot has no row for (路面 road surface, 運賃 fare, 交番 police box, きっぷ ticket, エレベーター elevator) takes an English gloss from [JMdict](https://www.edrdg.org/wiki/index.php/JMdict-EDICT_Dictionary_Project), offline. It is always on, with no option. Order of precedence: words2 rows, then the dictionary form's words2 row (答えて → 答える), then JMdict, then the context rules and counter glosses, which still override all of them.
