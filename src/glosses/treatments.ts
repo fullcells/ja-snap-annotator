@@ -139,13 +139,15 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 		}
 	});
 
-	// 普通: a local train in a transit context (普通だけ止まる駅, 8時7分の普通). On its own (a timetable cell) there is no
-	// context: the row's gloss stays. (普通免許 is one word, from JMdict.)
+	// 普通: a local train in a transit context (普通だけ止まる駅, 8時7分の普通), or as the subject of a train's coming,
+	// stopping or running at a time (普通は15分ごとに来ます). On its own (a timetable cell) there is no context: the row's
+	// gloss stays. (普通免許 is one word, from JMdict.)
 	const TRANSIT = ["急行","快速","特急","各駅","電車","列車","駅","番線","止まる","止まり","乗って","乗り","行き","発車","時刻","線"];
 	tokens.forEach((token, index) => {
 		if (token.text !== "普通") return;
 		// in a transit text, or after a departure time: 8時7分の普通 (the 8:07 local)
-		if (TRANSIT.some(word => text.includes(word)) || /[0-9０-９]+[時分]の普通/.test(text)) token.gloss = "local (train)";
+		const runs = /普通[はがも]/.test(text) && /(?:来|止ま|走|出ま|着|発車)/.test(text) && /(?:[0-9０-９]+[時分]|ごと)/.test(text);
+		if (TRANSIT.some(word => text.includes(word)) || /[0-9０-９]+[時分]の普通/.test(text) || runs) token.gloss = "local (train)";
 	});
 
 	// 行き after a place, not followed by a verb ending: bound for (新町行き, 空港行きの電車, どこ行きですか).
@@ -177,11 +179,15 @@ export function applyJapaneseGlossTreatments(annotatedTokens: AnnotatedToken[]):
 				if (afterTime(index)) token.gloss = "from";
 				else if (tokens[index - 1]?.isWord && !PARTICLES.has(previous)) token.gloss = "than";
 				break;
+			case "あいだ": if (previous === "の") token.gloss = "between"; break;          // 新町と高田のあいだに
 			case "間": if (previous === "の" || tokens.slice(Math.max(0, index - 3), index).some(t => /^[〜～]$/.test(t.text))) token.gloss = "between"; break; // 新町〜海岸間
 			case "台": if (previous === "時") token.gloss = "(hour) range"; break;             // 7時台の電車: trains in the 7 o'clock hour
 			case "書": if (tokens[index - 1]?.isWord && !PARTICLES.has(previous)) token.gloss = "document"; break; // 予約確認 + 書
 			case "通過": if (isTransit || tokens.length === 1) token.gloss = "passes (without stopping)"; break; // timetable mark
 			case "線路": if (isTransit || tokens.length === 1) token.gloss = "track"; break;
+			// レ in a timetable text: the mark for a train that passes without stopping (レ＝通過). On its own the row
+			// stays "re" (the note, ド・レ・ミ): a bare label gives no context.
+			case "レ": if (isTransit || text.includes("通過")) token.gloss = "passes (timetable mark)"; break;
 			// とき after a clause (運転するとき, 着いたとき, 子どものとき): when. The row keeps "time" (とき on its own).
 			case "とき": if (previous === "の" || /(?:る|た|だ|い|ない|な)$/.test(previous)) token.gloss = "when"; break;
 		}

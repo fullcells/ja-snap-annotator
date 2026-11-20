@@ -60,11 +60,16 @@ test('transit and direction senses, only in their context', async () => {
 	assert.equal(await gloss('9時より営業します', 'より'), 'from');
 	assert.notEqual(await gloss('通常、より高品質です', 'より'), 'than'); // より before an adjective: more
 	assert.equal(await gloss('新町〜海岸間で運休します', '間'), 'between');
+	assert.equal(await gloss('新町と高田のあいだに、駅はいくつありますか？', 'あいだ'), 'between');
+	assert.equal(await gloss('平日の昼間、普通は15分ごとに来ます。', '普通'), 'local (train)');
+	assert.notEqual(await gloss('普通は友達が来ます', '普通'), 'local (train)'); // no time: usually, not a train
 	assert.equal(await gloss('平日の7時台の電車', '台'), '(hour) range');
 	assert.equal(await gloss('レンタカーの予約確認書', '書'), 'document');
 	assert.equal(await gloss('花子さんが運転するとき、何が必要ですか。', 'とき'), 'when');
 	assert.equal(await gloss('この駅は急行が通過します', '通過'), 'passes (without stopping)');
 	assert.equal(await gloss('電車の線路', '線路'), 'track');
+	assert.equal(await gloss('レ＝通過（この駅には止まりません）', 'レ'), 'passes (timetable mark)');
+	assert.notEqual(await gloss('ド・レ・ミ', 'レ'), 'passes (timetable mark)');
 });
 
 // Grammatical context (src/glosses/context-glosses.ts): fires only on explicit evidence; everything else keeps its gloss.
@@ -124,4 +129,15 @@ test('聞く after に: ask; よく before knowing: well; 旅行中: during; こ
 	assert.equal(await gloss('旅行中、パスポートはどこですか', '中'), 'during');
 	assert.equal(await gloss('電車の中で何をしますか。', '中'), 'inside');
 	assert.equal(await gloss('駅で困ったとき、誰に聞きますか。', '困った'), 'in trouble');
+});
+
+// Context readings (src/readings/context-readings.ts)
+const readingOf = async (text, word) => (await token(text, word))?.phoneticToken.map(p => p[1] ?? p[0]).join('');
+test('間 on its own is あいだ; as a suffix or inside a word it keeps its reading', async () => {
+	assert.equal(await readingOf('ホテルはレストランとカフェの間にあります。', 'の間'), 'のあいだ');
+	assert.equal(await readingOf('間', '間'), 'あいだ');
+	assert.equal(await readingOf('間に', '間に'), 'あいだに');
+	assert.equal(await readingOf('新町〜海岸間で運休します', '間'), 'かん');
+	assert.equal(await readingOf('間に合いません', '間に合い'), 'まにあい');
+	assert.equal(await readingOf('昼間', '昼間'), 'ひるま');
 });

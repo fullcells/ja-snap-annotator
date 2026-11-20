@@ -7,6 +7,7 @@ import { mergeJapaneseTeForms } from '../treatments/token-treatments';
 import { applyJapaneseNumberTokens, applyJapaneseNumberReadings, applyJapaneseCounterGlosses } from '../treatments/numbers';
 // 〇 / × as marks (まる circle, ばつ cross) outside arithmetic and numerals.
 import { applyJapaneseMarks } from '../treatments/marks';
+import { applyJapaneseContextReadings } from '../readings/context-readings';
 import { applyJapaneseGlossTreatments } from '../glosses/treatments';
 import { applyJapaneseContextGlosses } from '../glosses/context-glosses';
 import {
@@ -202,6 +203,8 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	tokens = resolveJapaneseReadings(tokens);
 	// Counting readings come after dictionary resolution, so 4時 is よじ and 3日間 みっかかん whatever the dictionary says.
 	tokens = applyJapaneseNumberReadings(tokens);
+	// Readings by context (Kuromoji's parts of speech): 間 on its own is あいだ (between); 〜間 keeps かん.
+	tokens = applyJapaneseContextReadings(tokens, text, morphemes);
 	tokens = applyJapaneseMarks(tokens);
 	// Glossify
 	tokens = applyJapaneseSBWordsGlosses(tokens, japaneseSBWords);

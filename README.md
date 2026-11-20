@@ -72,7 +72,9 @@ Particles and a few common words take their sense from the words around them, de
 - **でも -ever** after a question word (どの席でも, 何でも).
 - **Words:** 聞く after に is ask (人に聞きます); よく before a verb of knowing is well (よく知りません); 中 read ちゅう as a suffix is during (旅行中); この/その/あの辺 is area; 困った before とき/時/場合 is in trouble.
 
-Underfit on purpose: a rule changes a gloss only on that explicit evidence, and everything else keeps the gloss it had. A fragment without its verb (家族と) and に after a time or adverbial word (前に, ときに, 一緒に, 3時に) are left alone. A sense that is wrong in every context belongs in the words2 row instead (方角 is glossed angle there).
+Underfit on purpose: a rule changes a gloss only on that explicit evidence, and everything else keeps the gloss it had. A fragment without its verb (家族と) and に after a time or adverbial word (前に, ときに, 一緒に, 3時に) are left alone. A sense that is wrong in every context belongs in the words2 row instead (方角 is glossed direction there, not angle; 乗り場 boarding area, not station).
+
+**Context readings** (`src/readings/context-readings.ts`): 間 on its own (a noun, not a suffix) is read あいだ, "between" (カフェの間に, 間に); as a suffix it keeps its reading (新町〜海岸間 かん), and so do words that contain it (間に合う, 昼間). Kuromoji reads it ま, a sense learner text almost never means.
 
 ## English glosses from JMdict
 
@@ -96,7 +98,7 @@ Releases are automatic. Every push to `main` runs the build and tests (`.github/
 To release: raise the version (`npm version minor --no-git-tag-version`, or patch / major), commit, push. Consumers pin the release URL, for example:
 
 ```json
-"ja-snap-annotator": "https://github.com/fullcells/ja-snap-annotator/releases/download/v0.2.0/ja-snap-annotator-0.2.0.tgz"
+"ja-snap-annotator": "https://github.com/fullcells/ja-snap-annotator/releases/download/v0.3.0/ja-snap-annotator-0.3.0.tgz"
 ```
 
 Pin a version rather than "latest": annotations are generated data, and a new annotator changes readings, glosses and boundaries, so each consumer moves to a new release deliberately (install, re-annotate, review the diff). `npm run release:pack` still builds the same tarball locally into `releases/`.
