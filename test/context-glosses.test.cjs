@@ -6,6 +6,26 @@ const {annotate} = require('../dist');
 const token = async (text, word) => (await annotate(text)).find(t => t.text === word);
 const gloss = async (text, word) => (await token(text, word))?.gloss;
 
+test('keeps critical readings and senses in unambiguous beginner constructions', async () => {
+	for (const [text, word, reading, expectedGloss] of [
+		['誰がいますか？', '誰', 'だれ', 'Who'],
+		['今日は月曜日です。', '今日', 'きょう', 'today'],
+		['写真を撮りました。', '撮り', 'とり', 'take'],
+		['雨が降ります。', '降り', 'ふり', 'rain'],
+		['雪がたくさん降っています。', '降って', 'ふって', 'snow'],
+		['お風呂場で何をしていますか？', '場', 'ば', 'place'],
+		['公園に入りました。', '入り', 'はいり', 'enter'],
+		['猫を外に出した。', '外', 'そと', 'outside'],
+	]) {
+		const value = await token(text, word);
+		assert.equal(value.phoneticToken.map(p => p[1] ?? p[0]).join(''), reading, text);
+		assert.equal(value.gloss, expectedGloss, text);
+	}
+	assert.notEqual(await gloss('電車から降ります。', '降り'), 'rain');
+	assert.equal(await gloss('パンにバターを塗っています。', '塗って'), 'spread');
+	assert.equal(await gloss('壁を青く塗っています。', '塗って'), 'paint');
+});
+
 test('〇をつけて: mark, not attach', async () => {
 	assert.equal(await gloss('正しいほうに〇をつけてください。', 'つけて'), 'mark');
 	assert.equal(await gloss('×をつけてください', 'つけて'), 'mark');

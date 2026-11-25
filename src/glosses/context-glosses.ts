@@ -9,6 +9,7 @@
 // Runs after applyJapaneseGlossTreatments, so these are the strongest glosses for the tokens they touch.
 import type { AnnotatedToken } from '../types';
 import { morphemeSpans, type JapaneseMorpheme } from '../shared/morphemes';
+import { precipitationBefore } from '../shared/weather';
 
 type Span = JapaneseMorpheme & { start: number; end: number };
 
@@ -95,12 +96,22 @@ export function applyJapaneseContextGlosses(tokens: AnnotatedToken[], morphemes:
 				// 旅行中, 授業中 (ちゅう, a suffix): during. 電車の中 (なか) stays inside; 世界中 (じゅう) is one word.
 				const reading = (token.phoneticToken ?? []).map(part => part[1] ?? part[0]).join('');
 				if (startingAt(starts[index])?.pos_detail_1 === '接尾' && reading === 'ちゅう') token.gloss = 'during';
+				if (out[index - 1]?.text === '話し' && reading === 'ちゅう') token.gloss = 'in progress';
+				if (out[index - 1]?.text === '晩' && reading === 'じゅう') token.gloss = 'throughout';
 				return;
 			}
 			case '辺': {
 				if (['この', 'その', 'あの'].includes(out[index - 1]?.text ?? '')) token.gloss = 'area';   // この辺: this area
 				return;
 			}
+		}
+		if (token.text === '降り' || token.text === '降って') {
+			const weather = precipitationBefore(morphemes, spans.findIndex(m => m.start === starts[index]));
+			if (weather) token.gloss = weather;
+		}
+		if (token.text === '撮り' && out[index - 1]?.text === 'を' && out[index - 2]?.text === '写真') token.gloss = 'take';
+		if (token.text === '塗って' && out[index - 1]?.text === 'を' && ['バター', 'ジャム'].includes(out[index - 2]?.text)) {
+			token.gloss = 'spread';
 		}
 		// 困ったとき, 困った時, 困った場合: (when) in trouble. Before a noun otherwise (困った人) it keeps its gloss.
 		if (/^困っ(た)?$/.test(token.text) && startingAt(starts[index])?.basic_form === '困る') {

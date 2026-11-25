@@ -182,6 +182,7 @@ export const JAPANESE_COUNTERS: Record<string, CounterRule> = {
 // 歳 years old, 分 minute) are left as they are.
 export const JAPANESE_COUNTER_GLOSSES: Record<string, string> = {
 	'円': 'yen', '月': 'month', '日': 'day', '日間': 'days', '時': "o'clock", '時間': 'hours',
+	'羽': '(birds)', '本': '(long)',
 	'番線': 'platform', '番': 'number', '号': 'number', '号車': 'car (number)', '番目': '-th',
 	'丁目': 'block',
 };
@@ -198,6 +199,7 @@ const QUESTION_COUNTERS: Record<string, { reading: [string, string][]; gloss: st
 	'何羽': { reading: [['何', 'なん'], ['羽', 'わ']], gloss: 'how many (birds)' },
 	'何つ': { reading: [['何', 'いく'], ['つ', 'つ']], gloss: 'how many' }, // a written variant of いくつ
 	'数匹': { reading: [['数', 'すう'], ['匹', 'ひき']], gloss: 'a few (animals)' },
+	'数羽': { reading: [['数', 'すう'], ['羽', 'わ']], gloss: 'a few (birds)' },
 };
 
 // Weekdays written as one character: in a range or list (月〜金, 土・日) or after a date (14日（金）).
@@ -263,7 +265,32 @@ export function applyJapaneseNumberTokens(tokens: AnnotatedToken[]): AnnotatedTo
 		}
 		out.push(t);
 	}
-	return out;
+	return mergeJapaneseFractions(out);
+}
+
+// In a fraction such as 4分の1, 分 is ぶん. A numeral after の is
+// required so 4分の休憩 still starts with the duration よんぷん.
+function mergeJapaneseFractions(tokens: AnnotatedToken[]): AnnotatedToken[] {
+	const output: AnnotatedToken[] = [];
+	for (let i = 0; i < tokens.length; i++) {
+		const denominator = parseJapaneseNumber(tokens[i].text);
+		const numerator = parseJapaneseNumber(tokens[i + 3]?.text);
+		if (denominator === null || denominator === 0 || numerator === null
+			|| tokens[i + 1]?.text !== '分' || tokens[i + 2]?.text !== 'の') {
+			output.push(tokens[i]);
+			continue;
+		}
+		const denominatorText = tokens[i].text;
+		const numeratorText = tokens[i + 3].text;
+		output.push({
+			text: denominatorText + '分の' + numeratorText,
+			isWord: 1,
+			gloss: numerator + '/' + denominator,
+			phoneticToken: [[denominatorText, japaneseNumberReading(denominator)], ['分', 'ぶん'], ['の', 'の'], [numeratorText, japaneseNumberReading(numerator)]],
+		});
+		i += 3;
+	}
+	return output;
 }
 
 /** Readings of numbers with counters, dates, times and weekday abbreviations. Returns new tokens; input is unchanged. */
@@ -304,6 +331,12 @@ export function applyJapaneseCounterGlosses(input: AnnotatedToken[]): AnnotatedT
 		const prev = tokens[i - 1]?.text;
 		const counting = isNumberText(prev) || prev === '何';
 		if (counting && JAPANESE_COUNTER_GLOSSES[t.text]) t.gloss = JAPANESE_COUNTER_GLOSSES[t.text];
+		if (counting && t.text === '足') {
+			const beforeNumber = tokens.slice(Math.max(0, i - 3), i - 1).map(token => token.text).join('');
+			const afterCounter = tokens.slice(i + 1, i + 3).map(token => token.text).join('');
+			if (/(?:靴|靴下|スニーカー|サンダル)[がをは]?$/.test(beforeNumber)
+				|| /^(?:の)?(?:靴|靴下|スニーカー|サンダル)/.test(afterCounter)) t.gloss = '(pairs)';
+		}
 		// numbers in digits gloss as themselves (1, 21, 2026), as 21,300 does, not as words (one, twenty one)
 		if (t.isWord && /^[0-9０-９]+$/.test(t.text)) t.gloss = t.text.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 		// a kanji number words2 has no row for (五十三, 二百十): its value, as Arabic numbers are glossed (21,300)

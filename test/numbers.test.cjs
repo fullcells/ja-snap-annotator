@@ -29,6 +29,15 @@ test('other counters: h-row, k-row, people, things', async () => {
 	for (const [text, want] of Object.entries(cases)) assert.equal(await read(text), want, text);
 });
 
+test('fractions read 分 as ぶん and keep the numerator and denominator in order', async () => {
+	for (const [text, kana, gloss] of [['4分の1', 'よんぶんのいち', '1/4'], ['十二分の五', 'じゅうにぶんのご', '5/12']]) {
+		const tokens = await annotate(text);
+		assert.equal(reading(tokens), kana);
+		assert.deepEqual(tokens.map(t => [t.text, t.gloss]), [[text, gloss]]);
+	}
+	assert.equal(await read('4分の休憩'), 'よんぷんのきゅうけい');
+});
+
 test('dates, times and days', async () => {
 	const cases = {'4月': 'しがつ', '7月': 'しちがつ', '9月': 'くがつ', '04月01日': 'しがつついたち', '11月14日': 'じゅういちがつじゅうよっか',
 		'2日': 'ふつか', '10日': 'とおか', '20日': 'はつか', '24日': 'にじゅうよっか', '17日': 'じゅうしちにち', '何日': 'なんにち', '1日': 'いちにち',
@@ -61,6 +70,7 @@ test('comma-grouped numbers are one number', async () => {
 test('a counter after a number glosses its counting sense', async () => {
 	assert.equal(await gloss('130円', '円'), 'yen');
 	assert.equal(await gloss('11月', '月'), 'month');
+	assert.equal(await gloss('靴下を1足買う', '足'), '(pairs)');
 	assert.equal(await gloss('1番線', '番線'), 'platform');
 	assert.equal(await gloss('一つ目', '目'), '-th');
 	assert.equal(await gloss('大橋からいくつ目の駅ですか', '目'), '-th');
