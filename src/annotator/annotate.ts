@@ -17,7 +17,8 @@ import {
 	japaneseSBWordsHasRow,
 } from '../snapshot/japanese-sb-words';
 import { applyJapaneseBaseFormGlosses } from '../glosses/base-form';
-import type { JapaneseMorpheme } from '../shared/morphemes';
+import { morphemeSpans, type JapaneseMorpheme } from '../shared/morphemes';
+import { precipitationBefore } from '../shared/weather';
 import { applyJapaneseJmdictGlosses, isJapaneseJmdictWord } from '../glosses/jmdict';
 import { mergeJapaneseDictionaryWords } from '../treatments/dictionary-merges';
 import type { AnnotatedToken, PhoneticPart, PhoneticToken, SBWordRow2 } from '../types';
@@ -183,6 +184,35 @@ export type JapaneseAnnotateOptions = {
 	latestSBWords?: SBWordRow2[];
 };
 
+/** Preserve context-specific verb senses after a caller has applied generic dictionary glosses. */
+export async function applyJapaneseContextVerbGlosses(tokens: AnnotatedToken[], morphemes?: JapaneseMorpheme[]): Promise<AnnotatedToken[]> {
+	let textPosition = 0;
+	let weatherMorphemes: JapaneseMorpheme[] | undefined = morphemes;
+	let weatherSpans: ReturnType<typeof morphemeSpans> | undefined;
+	const result: AnnotatedToken[] = [];
+	for (const [index, token] of tokens.entries()) {
+		let gloss: string | undefined;
+		if (token.text === '降り' || token.text === '降って') {
+			if (!weatherMorphemes) {
+				await ensureKuroshiroInitialized();
+				const parsed: JapaneseMorpheme[] = await kuroshiro._analyzer.parse(tokens.map(part => part.text).join(''));
+				weatherMorphemes = parsed;
+			}
+			weatherSpans ??= morphemeSpans(weatherMorphemes);
+			const morphemeIndex = weatherSpans.findIndex(morpheme => morpheme.start === textPosition);
+			gloss = precipitationBefore(weatherMorphemes, morphemeIndex);
+		}
+		if (tokens[index - 1]?.text === 'を') {
+			const object = tokens[index - 2]?.text;
+			if (token.text === '撮り' && object === '写真') gloss = 'take';
+			if (token.text === '塗って' && (object === 'バター' || object === 'ジャム')) gloss = 'spread';
+		}
+		result.push(gloss ? { ...token, gloss } : token);
+		textPosition += token.text.length;
+	}
+	return result;
+}
+
 // Complete offline-first Japanese annotation. The bundled JapaneseSBWords are
 // usable without a connection; browser clients refresh them locally in the
 // background. Words words2 lacks fall back to JMdict's English; only words neither knows keep a null gloss.
@@ -220,6 +250,7 @@ export async function annotate(text: string, options: JapaneseAnnotateOptions = 
 	// Grammatical context (Kuromoji's parts of speech and dictionary forms): に, と, でも by their verb or question word, and a
 	// few words by their neighbours (人に聞く ask, よく知らない well, 旅行中 during). Only on explicit evidence.
 	tokens = applyJapaneseContextGlosses(tokens, morphemes);
+	tokens = await applyJapaneseContextVerbGlosses(tokens, morphemes);
 	// A counter after a number means its counting sense (円 yen, 月 month), stronger than the snapshot's noun gloss.
 	tokens = applyJapaneseCounterGlosses(tokens);
 	// Output

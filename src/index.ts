@@ -1,5 +1,6 @@
 export {
 	annotate,
+	applyJapaneseContextVerbGlosses,
 	configure,
 	spellTokens,
 	tokenizeAndSpell,

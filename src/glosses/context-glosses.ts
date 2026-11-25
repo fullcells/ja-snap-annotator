@@ -9,7 +9,6 @@
 // Runs after applyJapaneseGlossTreatments, so these are the strongest glosses for the tokens they touch.
 import type { AnnotatedToken } from '../types';
 import { morphemeSpans, type JapaneseMorpheme } from '../shared/morphemes';
-import { precipitationBefore } from '../shared/weather';
 
 type Span = JapaneseMorpheme & { start: number; end: number };
 
@@ -104,14 +103,6 @@ export function applyJapaneseContextGlosses(tokens: AnnotatedToken[], morphemes:
 				if (['この', 'その', 'あの'].includes(out[index - 1]?.text ?? '')) token.gloss = 'area';   // この辺: this area
 				return;
 			}
-		}
-		if (token.text === '降り' || token.text === '降って') {
-			const weather = precipitationBefore(morphemes, spans.findIndex(m => m.start === starts[index]));
-			if (weather) token.gloss = weather;
-		}
-		if (token.text === '撮り' && out[index - 1]?.text === 'を' && out[index - 2]?.text === '写真') token.gloss = 'take';
-		if (token.text === '塗って' && out[index - 1]?.text === 'を' && ['バター', 'ジャム'].includes(out[index - 2]?.text)) {
-			token.gloss = 'spread';
 		}
 		// 困ったとき, 困った時, 困った場合: (when) in trouble. Before a noun otherwise (困った人) it keeps its gloss.
 		if (/^困っ(た)?$/.test(token.text) && startingAt(starts[index])?.basic_form === '困る') {

@@ -2,7 +2,7 @@
 // meet them. Each rule fires only in its context; elsewhere the row's gloss stays (the rows themselves are fixed in words2).
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const {annotate} = require('../dist');
+const {annotate, applyJapaneseContextVerbGlosses} = require('../dist');
 const token = async (text, word) => (await annotate(text)).find(t => t.text === word);
 const gloss = async (text, word) => (await token(text, word))?.gloss;
 
@@ -24,6 +24,23 @@ test('keeps critical readings and senses in unambiguous beginner constructions',
 	assert.notEqual(await gloss('電車から降ります。', '降り'), 'rain');
 	assert.equal(await gloss('パンにバターを塗っています。', '塗って'), 'spread');
 	assert.equal(await gloss('壁を青く塗っています。', '塗って'), 'paint');
+});
+
+test('restores only the reviewed verb senses after generic dictionary glossing', async () => {
+	for (const [text, word, generic, expected] of [
+		['雨が降ります。', '降り', 'descend', 'rain'],
+		['雪がたくさん降っています。', '降って', 'fall', 'snow'],
+		['電車から降ります。', '降り', 'get off', 'get off'],
+		['写真を撮りました。', '撮り', 'photo', 'take'],
+		['パンにバターを塗っています。', '塗って', 'paint', 'spread'],
+		['壁を青く塗っています。', '塗って', 'paint', 'paint'],
+		['駅に行きます。', 'に', 'at', 'at'],
+	]) {
+		const original = await annotate(text);
+		const annotated = original.map(t => t.text === word ? { ...t, gloss: generic } : t);
+		const result = await applyJapaneseContextVerbGlosses(annotated);
+		assert.deepEqual(result, annotated.map(t => t.text === word ? { ...t, gloss: expected } : t), text);
+	}
 });
 
 test('〇をつけて: mark, not attach', async () => {
