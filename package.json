@@ -1,6 +1,6 @@
 {
   "name": "ja-snap-annotator",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Offline-first, snapshot-based Japanese annotation for TypeScript and JavaScript.",
   "license": "CC-BY-NC-SA-4.0",
